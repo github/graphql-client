@@ -135,7 +135,9 @@ These `<%graphql` sections are simply ignored at runtime but make their definiti
 
 ## Examples
 
-[github/github-graphql-rails-example](https://github.com/github/github-graphql-rails-example) is an example application using this library to implement views on the GitHub GraphQL API.
+* [github/github-graphql-rails-example](https://github.com/github/github-graphql-rails-example) is an example application using this library to implement views on the GitHub GraphQL API.
+
+* [gauravtiwari/graphql-sinatra-erb](https://github.com/gauravtiwari/graphql-sinatra-erb) is an example sinatra application using this library to implement views on a [demo blog api](https://relay-rails-blog.herokuapp.com/) using GraphQL
 
 ## Installation
 

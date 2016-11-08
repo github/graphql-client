@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.files = Dir["README.md", "LICENSE", "lib/**/*.rb"]
 
   s.add_dependency "activesupport", ">= 3.0", "< 6.0"
-  s.add_dependency "graphql", ">= 0.19.2"
+  s.add_dependency "graphql", ">= 0.19.2", "< 2"
 
   s.add_development_dependency "actionpack", ">= 3.2.22", "< 6.0"
   s.add_development_dependency "minitest", "~> 5.9"

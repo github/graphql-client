@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "active_support/inflector"
+
 module GraphQL
   class Client
     # Public: Erubis enhancer that adds support for GraphQL static query sections.
@@ -22,13 +24,13 @@ module GraphQL
         fragment_name = graphql.match(/fragment ([A-Z]\w+) on/).try :[], 1
 
         # Convert it to a local we'll use
-        local_name = fragment_name.underscore
+        local_name = ActiveSupport::Inflector.underscore(fragment_name)
 
         # Get the namespace
-        const_name = @filename
-          .gsub(/^app\//, "")
-          .gsub(/\.html\.erb$/, "")
-          .camelize
+        const_name = ActiveSupport::Inflector.camelize(@filename
+          .gsub(/^app\//, "") # Get rid of app/ prefix
+          .gsub(/\.html\.erb$/, "") # Get rid of extension
+        )
 
         input = input.gsub /<%graphql/, <<-ERB
         <%

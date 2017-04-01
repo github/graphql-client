@@ -10,7 +10,7 @@ ActionView::Template::Handlers::ERB.class_eval do
       # expression
       template_source = template.source.dup.force_encoding("BINARY")
 
-      erb = template_source.gsub(ActionView::Template::Handlers::ERB::ENCODING_TAG, '')
+      erb = template_source.gsub(ActionView::Template::Handlers::ERB::ENCODING_TAG, "")
       encoding = $2
 
       erb.force_encoding valid_encoding(template.source.dup, encoding)
@@ -23,9 +23,9 @@ ActionView::Template::Handlers::ERB.class_eval do
 
     self.class.erb_implementation.new(
       erb,
-      :filename => template.inspect, # We need this passed as a property to figure out magic modules
-      :escape => (self.class.escape_whitelist.include? template.mime_type),
-      :trim => (self.class.erb_trim_mode == "-")
+      filename: template.inspect, # We need this passed as a property to figure out magic modules
+      escape: (self.class.escape_whitelist.include? template.mime_type),
+      trim: (self.class.erb_trim_mode == "-")
     ).src
   end
 end

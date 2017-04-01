@@ -16,28 +16,32 @@ module GraphQL
     module ErubisEnhancer
       # Internal: Extend Erubis handler to simply ignore <%graphql sections.
       def convert_input(src, input)
-        graphql, _ = GraphQL::Client::ViewModule.extract_graphql_section(input)
+        if @filename
+          graphql, _ = GraphQL::Client::ViewModule.extract_graphql_section(input)
 
-        # Get the name of the fragment
-        #
-        # So `fragment Pat on User` would return "Pat"
-        fragment_name = graphql.match(/fragment ([A-Z]\w+) on/).try :[], 1
+          # Get the name of the fragment
+          #
+          # So `fragment Pat on User` would return "Pat"
+          fragment_name = graphql.match(/fragment ([A-Z]\w+) on/).try :[], 1
 
-        # Convert it to a local we'll use
-        local_name = ActiveSupport::Inflector.underscore(fragment_name)
+          # Convert it to a local we'll use
+          local_name = ActiveSupport::Inflector.underscore(fragment_name)
 
-        # Get the namespace
-        const_name = ActiveSupport::Inflector.camelize(@filename
-          .gsub(/^app\//, "") # Get rid of app/ prefix
-          .gsub(/\.html\.erb$/, "") # Get rid of extension
-        )
+          # Get the namespace
+          const_name = ActiveSupport::Inflector.camelize(@filename
+            .gsub(/^app\//, "") # Get rid of app/ prefix
+            .gsub(/\.html\.erb$/, "") # Get rid of extension
+          )
 
-        input = input.gsub /<%graphql/, <<-ERB
-        <%
-          raise ArgumentError, "This template must be passed `#{local_name}`" unless local_assigns[:#{local_name}]
-          #{local_name} = #{const_name}::#{fragment_name}.new(#{local_name})
-        %>
-        ERB
+          input = input.gsub /<%graphql/, <<-ERB
+          <%
+            raise ArgumentError, "This template must be passed `#{local_name}`" unless local_assigns[:#{local_name}]
+            #{local_name} = #{const_name}::#{fragment_name}.new(#{local_name})
+          %>
+          ERB
+        else
+          input = input.gsub /<%graphql/, "<%#"
+        end
 
         super(src, input)
       end

@@ -25,7 +25,7 @@ module GraphQL
         local_name = fragment_name.underscore
 
         # Get the namespace
-        const_name = @filename.inspect
+        const_name = @filename
           .gsub(/^app\//, "")
           .gsub(/\.html\.erb$/, "")
           .camelize

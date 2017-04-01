@@ -21,12 +21,9 @@ ActionView::Template::Handlers::ERB.class_eval do
       erb = template.source.dup
     end
 
-    require 'byebug'
-    byebug
-
     self.class.erb_implementation.new(
       erb,
-      :filename => template, # We need this passed as a property to figure out magic modules
+      :filename => template.inspect, # We need this passed as a property to figure out magic modules
       :escape => (self.class.escape_whitelist.include? template.mime_type),
       :trim => (self.class.erb_trim_mode == "-")
     ).src

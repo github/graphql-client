@@ -1,8 +1,6 @@
 <%graphql
   fragment User on User {
     login
-
-    ...TestViewModule::Views::Users::Profile::Show::User
   }
 %>
 <%= user.login %>

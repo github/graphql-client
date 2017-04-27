@@ -9,7 +9,7 @@ module RuboCop
     module GraphQL
       # Public: Rubocop for catching overfetched fields in ERB templates.
       class Overfetch < Cop
-        def_node_search :send_methods, "({send csend} ...)"
+        def_node_search :send_methods, "({send csend block_pass} ...)"
 
         def investigate(processed_source)
           erb = File.read(processed_source.buffer.name)
@@ -33,9 +33,12 @@ module RuboCop
           visitor.visit
 
           send_methods(processed_source.ast).each do |node|
-            _receiver, method_name, *_args = *node
-            aliases.fetch(method_name.to_s, []).each do |field_name|
-              fields[field_name] += 1
+            method_names = method_names_for(*node)
+
+            method_names.each do |method_name|
+              aliases.fetch(method_name, []).each do |field_name|
+                fields[field_name] += 1
+              end
             end
           end
 
@@ -55,6 +58,18 @@ module RuboCop
           names << "#{underscore_name}?"
 
           names
+        end
+
+        def method_names_for(*node)
+          receiver, method_name, *_args = node
+          method_names = []
+
+          method_names << method_name if method_name
+
+          # add field accesses like `nodes.map(&:field)`
+          method_names.concat(receiver.children) if receiver && receiver.sym_type?
+
+          method_names.map!(&:to_s)
         end
       end
     end

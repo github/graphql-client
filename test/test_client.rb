@@ -640,6 +640,81 @@ class TestClient < MiniTest::Test
     GRAPHQL
   end
 
+  def test_client_parse_query_external_top_level_fragments_document
+    Object.const_set :TopLevelUserFragment, @client.parse(<<-'GRAPHQL')
+      fragment on User {
+        profilePic(size: 50)
+      }
+    GRAPHQL
+
+    Temp.const_set :FriendFragment, @client.parse(<<-'GRAPHQL')
+      fragment on User {
+        id
+        name
+        ...TopLevelUserFragment
+      }
+    GRAPHQL
+
+    Temp.const_set :UserQuery, @client.parse(<<-'GRAPHQL')
+      query {
+        user(id: 4) {
+          friends(first: 10) {
+            ...TestClient::Temp::FriendFragment
+          }
+          mutualFriends(first: 10) {
+            ...TestClient::Temp::FriendFragment
+          }
+        }
+      }
+    GRAPHQL
+
+    assert_equal(<<-'GRAPHQL'.gsub(/^      /, "").chomp, @client.document.to_query_string)
+      fragment TopLevelUserFragment on User {
+        profilePic(size: 50)
+      }
+
+      fragment TestClient__Temp__FriendFragment on User {
+        id
+        name
+        ...TopLevelUserFragment
+      }
+
+      query TestClient__Temp__UserQuery {
+        user(id: 4) {
+          friends(first: 10) {
+            ...TestClient__Temp__FriendFragment
+          }
+          mutualFriends(first: 10) {
+            ...TestClient__Temp__FriendFragment
+          }
+        }
+      }
+    GRAPHQL
+
+    assert_equal(<<-'GRAPHQL'.gsub(/^      /, "").chomp, Temp::UserQuery.document.to_query_string)
+      query TestClient__Temp__UserQuery {
+        user(id: 4) {
+          friends(first: 10) {
+            ...TestClient__Temp__FriendFragment
+          }
+          mutualFriends(first: 10) {
+            ...TestClient__Temp__FriendFragment
+          }
+        }
+      }
+
+      fragment TestClient__Temp__FriendFragment on User {
+        id
+        name
+        ...TopLevelUserFragment
+      }
+
+      fragment TopLevelUserFragment on User {
+        profilePic(size: 50)
+      }
+    GRAPHQL
+  end
+
   def test_client_parse_fragment_query_result_aliases
     Temp.const_set :UserFragment, @client.parse(<<-'GRAPHQL')
       fragment on User {
@@ -674,16 +749,16 @@ class TestClient < MiniTest::Test
                                   "repositories" => [
                                     {
                                       "name" => "github",
-                                      "watchers" => {
+                                      "watchers" => [{
                                         "login" => "josh"
-                                      }
+                                      }]
                                     }
                                   ])
 
     assert_equal "1", user.id
     assert_kind_of Array, user.repositories
     assert_equal "github", user.repositories[0].name
-    assert_equal "josh", user.repositories[0].watchers.login
+    assert_equal "josh", user.repositories[0].watchers[0].login
   end
 
   def test_client_parse_fragment_query_result_with_inline_fragments
@@ -707,16 +782,16 @@ class TestClient < MiniTest::Test
                                   "repositories" => [
                                     {
                                       "name" => "github",
-                                      "watchers" => {
+                                      "watchers" => [{
                                         "login" => "josh"
-                                      }
+                                      }]
                                     }
                                   ])
 
     assert_equal "1", user.id
     assert_kind_of Array, user.repositories
     assert_equal "github", user.repositories[0].name
-    assert_equal "josh", user.repositories[0].watchers.login
+    assert_equal "josh", user.repositories[0].watchers[0].login
   end
 
   def test_client_parse_nested_inline_fragments_on_same_node
@@ -826,7 +901,7 @@ class TestClient < MiniTest::Test
 
     assert_kind_of Temp::RepositoryFragment.type, repo
     assert_equal "rails", repo.name
-    assert_kind_of TestClient::Temp::RepositoryFragment.type[:owner], repo.owner
+    assert_kind_of TestClient::Temp::RepositoryFragment.type[:owner].of_klass, repo.owner
     assert_equal "josh", repo.owner.login
 
     assert_equal "TestClient::Temp::RepositoryFragment", Temp::RepositoryFragment.name

@@ -110,32 +110,37 @@ module GraphQL
 
       definition_dependencies = Set.new
 
-      str = str.gsub(/\.\.\.([a-zA-Z0-9_]+(::[a-zA-Z0-9_]+)+)/) do
+      str = str.gsub(/\.\.\.([a-zA-Z0-9_]+(::[a-zA-Z0-9_]+)*)/) do
         match = Regexp.last_match
         const_name = match[1]
-        begin
-          fragment = ActiveSupport::Inflector.constantize(const_name)
-        rescue NameError
-          fragment = nil
-        end
 
-        case fragment
-        when FragmentDefinition
-          definition_dependencies.merge(fragment.document.definitions)
-          "...#{fragment.definition_name}"
+        if str.match(/fragment\s*#{const_name}/)
+          match[0]
         else
-          if fragment
-            message = "expected #{const_name} to be a #{FragmentDefinition}, but was a #{fragment.class}."
-            if fragment.is_a?(Module) && fragment.constants.any?
-              message += " Did you mean #{fragment}::#{fragment.constants.first}?"
-            end
-          else
-            message = "uninitialized constant #{const_name}"
+          begin
+            fragment = ActiveSupport::Inflector.constantize(const_name)
+          rescue NameError
+            fragment = nil
           end
 
-          error = ValidationError.new(message)
-          error.set_backtrace(["#{filename}:#{lineno + match.pre_match.count("\n") + 1}"] + caller)
-          raise error
+          case fragment
+          when FragmentDefinition
+            definition_dependencies.merge(fragment.document.definitions)
+            "...#{fragment.definition_name}"
+          else
+            if fragment
+              message = "expected #{const_name} to be a #{FragmentDefinition}, but was a #{fragment.class}."
+              if fragment.is_a?(Module) && fragment.constants.any?
+                message += " Did you mean #{fragment}::#{fragment.constants.first}?"
+              end
+            else
+              message = "uninitialized constant #{const_name}"
+            end
+
+            error = ValidationError.new(message)
+            error.set_backtrace(["#{filename}:#{lineno + match.pre_match.count("\n") + 1}"] + caller)
+            raise error
+          end
         end
       end
 

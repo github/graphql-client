@@ -31,6 +31,9 @@ module GraphQL
         visitor[GraphQL::Language::Nodes::FragmentDefinition] << ->(node, _parent) do
           fields[node] = type_stack.object_types.last
         end
+        visitor[GraphQL::Language::Nodes::InlineFragment] << ->(node, _parent) do
+          fields[node] = type_stack.object_types.last
+        end
         visitor[GraphQL::Language::Nodes::Field] << ->(node, _parent) do
           fields[node] = type_stack.field_definitions.last.type
         end

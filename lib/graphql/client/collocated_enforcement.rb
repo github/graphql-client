@@ -3,6 +3,10 @@ require "graphql/client/error"
 
 module GraphQL
   class Client
+
+    # Collcation will not be enforced if a stack trace includes any of these gems.
+    WHITELISTED_GEM_NAMES = %w{pry byebug}
+
     # Raised when method is called from outside the expected file scope.
     class NonCollocatedCallerError < Error; end
 
@@ -30,7 +34,8 @@ module GraphQL
               return super(*args, &block) if Thread.current[:query_result_caller_location_ignore]
 
               locations = caller_locations(1, 1)
-              if locations.first.path != path
+
+              if (locations.first.path != path) && !(caller_locations.any? { |cl| WHITELISTED_GEM_NAMES.any? { |g| cl.path.include?("gems/#{g}") } })
                 error = NonCollocatedCallerError.new("#{method} was called outside of '#{path}' https://git.io/v1syX")
                 error.set_backtrace(caller(1))
                 raise error

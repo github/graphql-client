@@ -44,14 +44,14 @@ module GraphQL
       #
       # Returns nothing.
       def eager_load!
-        return unless File.directory?(path)
+        return unless File.directory?(load_path)
 
-        Dir.entries(path).each do |entry|
+        Dir.entries(load_path).each do |entry|
           next if entry == "." || entry == ".."
           name = entry.sub(/(\.\w+)+$/, "").camelize.to_sym
-          if ViewModule.valid_constant_name?(name) && loadable_const_defined?(name)
-            mod = const_get(name, false)
-            mod.eager_load!
+          if ViewModule.valid_constant_name?(name)
+            mod = const_defined?(name, false) ? const_get(name) : load_and_set_module(name)
+            mod.eager_load! if mod
           end
         end
 
@@ -73,76 +73,67 @@ module GraphQL
         name.to_s =~ /^[A-Z][a-zA-Z0-9_]*$/
       end
 
-      # Public: Override constant defined to check if constant name matches a
-      # view directory or template namespace.
-      #
-      # name - String or Symbol constant name
-      # inherit - If the lookup will also search the ancestors (default: true)
-      #
-      # Returns true if definition is found, otherwise false.
-      # def const_defined?(name, inherit = true)
-      #   if super(name.to_sym, inherit)
-      #     true
-      #   elsif const_path(name)
-      #     true
-      #   else
-      #     false
-      #   end
-      # end
-
-      def loadable_const_defined?(name)
-        if const_defined?(name.to_sym, false)
-          true
-        elsif const_path(name)
-          true
-        else
-          false
-        end
-      end
-
-      # Public: Source location that defined the Module.
+      # Public: Directory to retrieve nested GraphQL definitions from.
       #
       # Returns absolute String path under app/views.
-      attr_accessor :path
+      attr_accessor :load_path
+      alias_method :path=, :load_path=
+      alias_method :path, :load_path
 
-      # Internal: Detect source location for constant name.
+      # Public: if this module was defined by a view
       #
-      # name - String or Symbol constant name
-      #
-      # Examples
-      #
-      #   Views.const_path(:Users) #=> "app/views/users"
-      #   Views::Users.const_path(:Show) #=> "app/views/users/show.html.erb"
-      #   Views::Users.const_path(:Profile) #=> "app/views/users/_profile.html.erb"
-      #
-      # Returns String absolute path to file, otherwise nil.
-      def const_path(name)
-        pathname = ActiveSupport::Inflector.underscore(name.to_s)
-        Dir[File.join(path, "{#{pathname},_#{pathname}}{/,.*}")].map { |fn| File.expand_path(fn) }.first
-      end
+      # Returns absolute String path under app/views.
+      attr_accessor :source_path
 
       # Internal: Initialize new module for constant name and load ERB statics.
       #
-      # path - String path of directory or erb file.
+      # name - String or Symbol constant name.
       #
       # Examples
       #
-      #   load_module("app/views/users")
-      #   load_module("app/views/users/show.html.erb")
+      #   Views::Users.load_module(:Profile)
+      #   Views::Users::Profile.load_module(:Show)
       #
       # Returns new Module implementing Loadable concern.
-      def load_module(path)
-        mod = Module.new
+      def load_module(name)
+        pathname = ActiveSupport::Inflector.underscore(name.to_s)
+        path = Dir[File.join(load_path, "{#{pathname},_#{pathname}}{.*}")].map { |fn| File.expand_path(fn) }.first
 
-        if File.extname(path) == ".erb"
-          contents = File.read(path)
-          query, lineno = ViewModule.extract_graphql_section(contents)
-          mod = client.parse(query, path, lineno) if query
-        end
+        return if !path || File.extname(path) != ".erb"
 
+        contents = File.read(path)
+        query, lineno = ViewModule.extract_graphql_section(contents)
+        return unless query
+
+        mod = client.parse(query, path, lineno)
         mod.extend(ViewModule)
+        mod.load_path = File.join(load_path, pathname)
+        mod.source_path = path
         mod.client = client
-        mod.path = path
+        mod
+      end
+
+      def placeholder_module(name)
+        dirname = File.join(load_path, ActiveSupport::Inflector.underscore(name.to_s))
+        return nil unless Dir.exist?(dirname)
+
+        Module.new.tap do |mod|
+          mod.extend(ViewModule)
+          mod.load_path = dirname
+          mod.client = client
+        end
+      end
+
+      def load_and_set_module(name)
+        placeholder = placeholder_module(name)
+        const_set(name, placeholder) if placeholder
+
+        mod = load_module(name)
+        return placeholder unless mod
+
+        remove_const(name) if placeholder
+        const_set(name, mod)
+        mod.unloadable
         mod
       end
 
@@ -152,16 +143,7 @@ module GraphQL
       #
       # Returns module or raises NameError if missing.
       def const_missing(name)
-        path = const_path(name)
-
-        if path
-          mod = load_module(path)
-          const_set(name, mod)
-          mod.unloadable
-          mod
-        else
-          super
-        end
+        load_and_set_module(name) || super
       end
     end
   end

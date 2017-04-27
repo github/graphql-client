@@ -34,20 +34,12 @@ class TestViewModule < MiniTest::Test
     refute GraphQL::Client::ViewModule.valid_constant_name?("404")
   end
 
-  def test_const_path
-    assert_equal "#{Root}/views/users", Views.const_path(:Users)
-    assert_equal "#{Root}/views/users/show.html.erb", Views::Users.const_path(:Show)
-    assert_equal "#{Root}/views/users/_profile.html.erb", Views::Users.const_path(:Profile)
-
-    assert_nil Views.const_path(:Missing)
-  end
-
   def test_const_missing
     assert_kind_of Module, Views::Users
     assert_equal "#{Root}/views/users", Views::Users.path
 
     assert_kind_of Module, Views::Users::Show
-    assert_equal "#{Root}/views/users/show.html.erb", Views::Users::Show.path
+    assert_equal "#{Root}/views/users/show", Views::Users::Show.path
 
     assert_kind_of GraphQL::Client::FragmentDefinition, Views::Users::Show::User
     assert_equal(<<-'GRAPHQL'.gsub("      ", "").chomp, Views::Users::Show::User.document.to_query_string)
@@ -57,6 +49,11 @@ class TestViewModule < MiniTest::Test
     GRAPHQL
 
     assert_kind_of Module, Views::Users::Profile
-    assert_equal "#{Root}/views/users/_profile.html.erb", Views::Users::Profile.path
+    assert_equal "#{Root}/views/users/profile", Views::Users::Profile.path
+    assert_kind_of GraphQL::Client::FragmentDefinition, Views::Users::Profile::User
+
+    assert_kind_of Module, Views::Users::Profile::Show::User
+    assert_equal "#{Root}/views/users/profile/show", Views::Users::Profile::Show.path
+    assert_kind_of GraphQL::Client::FragmentDefinition, Views::Users::Profile::Show::User
   end
 end

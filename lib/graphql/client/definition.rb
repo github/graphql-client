@@ -76,7 +76,7 @@ module GraphQL
 
       def type
         # TODO: Fix type indirection
-        @type ||= GraphQL::Client::QueryResult.wrap(self, definition_node, name: "#{name}.type")
+        @type ||= GraphQL::Client::QueryResult.wrap(self, definition_node, document_types[definition_node], name: "#{name}.type")
       end
     end
   end

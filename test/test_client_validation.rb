@@ -29,6 +29,32 @@ class TestClientValidation < MiniTest::Test
     end
   end
 
+  def test_client_parse_query_missing_local_fragment
+    Temp.const_set :FooQuery, @client.parse(<<-'GRAPHQL')
+      query {
+        ...MissingFragment
+      }
+    GRAPHQL
+  rescue GraphQL::Client::ValidationError => e
+    assert_equal "#{__FILE__}:#{__LINE__ - 4}", e.backtrace.first
+    assert_equal "uninitialized constant MissingFragment", e.message
+  else
+    flunk "GraphQL::Client::ValidationError expected but nothing was raised"
+  end
+
+  def test_client_parse_fragment_missing_local_fragment
+    Temp.const_set :FooFragment, @client.parse(<<-'GRAPHQL')
+      query {
+        ...MissingFragment
+      }
+    GRAPHQL
+  rescue GraphQL::Client::ValidationError => e
+    assert_equal "#{__FILE__}:#{__LINE__ - 4}", e.backtrace.first
+    assert_equal "uninitialized constant MissingFragment", e.message
+  else
+    flunk "GraphQL::Client::ValidationError expected but nothing was raised"
+  end
+
   def test_client_parse_query_missing_external_fragment
     Temp.const_set :FooQuery, @client.parse(<<-'GRAPHQL')
       query {

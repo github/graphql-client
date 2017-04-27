@@ -9,12 +9,19 @@ require_relative "foo_helper"
 class TestQueryResult < MiniTest::Test
   DateTime = GraphQL::ScalarType.define do
     name "DateTime"
-    coerce_input ->(value) do
+    coerce_input ->(value, *) do
       Time.iso8601(value)
     end
-    coerce_result ->(value) do
+    coerce_result ->(value, *) do
       value.utc.iso8601
     end
+  end
+
+  PlanEnum = GraphQL::EnumType.define do
+    name "Plan"
+    value("FREE")
+    value("SMALL")
+    value("LARGE")
   end
 
   HumanLike = GraphQL::InterfaceType.define do
@@ -33,6 +40,17 @@ class TestQueryResult < MiniTest::Test
     field :homepageURL, types.String
     field :createdAt, !DateTime
     field :hobbies, types[types.String]
+    field :plan, !PlanEnum
+  end
+
+  BotType = GraphQL::ObjectType.define do
+    name "Bot"
+    field :login, types.String
+  end
+
+  ActorUnion = GraphQL::UnionType.define do
+    name "Actor"
+    possible_types [PersonType, BotType]
   end
 
   PersonConnection = PersonType.define_connection do
@@ -51,7 +69,28 @@ class TestQueryResult < MiniTest::Test
           company: "GitHub",
           createdAt: Time.at(0),
           updatedAt: Time.at(1),
-          hobbies: ["soccer", "coding"]
+          hobbies: ["soccer", "coding"],
+          plan: "LARGE"
+        )
+      }
+    end
+
+    field :userNoHobbies, !PersonType do
+      resolve ->(_query, _args, _ctx) {
+        OpenStruct.new(
+          hobbies: nil
+        )
+      }
+    end
+
+    field :currentActor, !ActorUnion do
+      resolve ->(_query, _args, _ctx) {
+        OpenStruct.new(
+          login: "josh",
+          name: "Josh",
+          firstName: "Joshua",
+          lastName: "Peek",
+          updatedAt: Time.at(1),
         )
       }
     end
@@ -400,6 +439,70 @@ class TestQueryResult < MiniTest::Test
     assert_equal %w(josh mislav), data.users.edges.map(&:node).map(&:login)
   end
 
+  def test_enum_values
+    Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
+      {
+        me {
+          name
+          plan
+        }
+      }
+    GRAPHQL
+
+    response = @client.query(Temp::Query)
+
+    person = response.data.me
+    assert_equal "Josh", person.name
+    assert_equal "LARGE", person.plan
+  end
+
+  def test_union_values
+    Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
+      {
+        currentActor {
+          ... on Person {
+            login
+          }
+          ... on Bot {
+            login
+          }
+        }
+      }
+    GRAPHQL
+
+    response = @client.query(Temp::Query)
+
+    actor = response.data.current_actor
+    assert_equal "Person", actor.typename
+    assert_equal "josh", actor.login
+  end
+
+  def test_interface_within_union_values
+    Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
+      {
+        currentActor {
+          ... on Person {
+            login
+          }
+          ... on HumanLike {
+            updatedAt
+          }
+          ... on Person {
+            name
+          }
+        }
+      }
+    GRAPHQL
+
+    response = @client.query(Temp::Query)
+
+    actor = response.data.current_actor
+    assert_equal "Person", actor.typename
+    assert_equal "josh", actor.login
+    assert_equal "Josh", actor.name
+    assert_equal Time.at(1).utc, actor.updatedAt
+  end
+
   def test_date_scalar_casting
     Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
       {
@@ -488,6 +591,21 @@ class TestQueryResult < MiniTest::Test
 
     person = response.data.me
     assert_equal ["soccer", "coding"], person.hobbies
+  end
+
+  def test_nullable_list
+    Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
+      {
+        userNoHobbies {
+          hobbies
+        }
+      }
+    GRAPHQL
+
+    response = @client.query(Temp::Query)
+
+    person = response.data.user_no_hobbies
+    assert_nil person.hobbies
   end
 
   def test_empty_selection_existence

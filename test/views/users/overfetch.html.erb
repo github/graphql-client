@@ -2,6 +2,18 @@
   fragment User on User {
     login
     birthday
+
+    posts(first: 10) {
+      edges {
+        node {
+          title
+        }
+      }
+    }
   }
 %>
 <%= user.login %>
+
+<%- user.posts.edges.map(&:node).map(&:title).each do |title| %>
+  <h1><%= title %></h1>
+<%- end %>

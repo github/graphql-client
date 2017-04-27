@@ -38,6 +38,7 @@ module GraphQL
             raise ArgumentError, "This template must be passed `#{local_name}`" unless local_assigns[:#{local_name}]
             #{local_name} = #{const_name}::#{fragment_name}.new(#{local_name})
           %>
+          <%#
           ERB
         else
           input = input.gsub /<%graphql/, "<%#"

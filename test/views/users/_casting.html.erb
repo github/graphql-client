@@ -1,0 +1,9 @@
+<%# Some comment %>
+<%graphql
+  fragment Me on User {
+    login
+  }
+%>
+
+<%= me.login %>
+<%= me.class.name %>

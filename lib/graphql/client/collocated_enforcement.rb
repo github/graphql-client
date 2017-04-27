@@ -36,7 +36,7 @@ module GraphQL
               locations = caller_locations(1, 1)
 
               if (locations.first.path != path) && !(caller_locations.any? { |cl| WHITELISTED_GEM_NAMES.any? { |g| cl.path.include?("gems/#{g}") } })
-                error = NonCollocatedCallerError.new("#{method} was called outside of '#{path}' https://git.io/v1syX")
+                error = NonCollocatedCallerError.new("#{method} was called outside of '#{path}' (called at #{locations.first.path}) https://git.io/v1syX")
                 error.set_backtrace(caller(1))
                 raise error
               end

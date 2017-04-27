@@ -55,7 +55,6 @@ class TestMagicCasting < MiniTest::Test
 
   def test_automatic_casting
     Views.client = @client
-    Views.eager_load!
 
     Temp.const_set :Query, @client.parse(<<-'GRAPHQL')
       query {

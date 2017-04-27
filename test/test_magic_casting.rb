@@ -61,13 +61,15 @@ class TestMagicCasting < MiniTest::Test
       query {
         viewer {
           ...TestMagicCasting::Views::Users::Casting::Me
+          ...TestMagicCasting::Views::Users::Casting::You
         }
       }
     GRAPHQL
 
     me = @client.query(Temp::Query).data.viewer
+    you = @client.query(Temp::Query).data.viewer
 
-    local_assigns = { me: me }
+    local_assigns = { me: me, you: you }
 
     filename = "views/users/_casting.html.erb"
     src = File.read(File.join(Root, filename))
@@ -76,6 +78,13 @@ class TestMagicCasting < MiniTest::Test
     output_buffer = ActionView::OutputBuffer.new
     erubis.result(binding)
 
-    assert_equal ["nakajima", "TestMagicCasting::Views::Users::Casting::Me.type"], output_buffer.strip.split("\n")
+    expected = <<-RESULT
+      nakajima
+      TestMagicCasting::Views::Users::Casting::Me.type
+      Today
+      TestMagicCasting::Views::Users::Casting::You.type
+    RESULT
+
+    assert_equal expected.gsub(/^      /, "").chomp, output_buffer.strip
   end
 end

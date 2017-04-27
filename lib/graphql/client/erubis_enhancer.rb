@@ -18,14 +18,21 @@ module GraphQL
       def convert_input(src, input)
         if @filename
           graphql, _ = GraphQL::Client::ViewModule.extract_graphql_section(input)
+          fragments = []
 
-          # Get the name of the fragment
-          #
-          # So `fragment Pat on User` would return "Pat"
-          fragment_name = graphql.match(/fragment ([A-Z]\w+) on/).try :[], 1
+          GraphQL.parse(graphql).definitions.each do |definition|
+            next unless definition.class == GraphQL::Language::Nodes::FragmentDefinition
 
-          # Convert it to a local we'll use
-          local_name = ActiveSupport::Inflector.underscore(fragment_name)
+            # Get the name of the fragment
+            #
+            # So `fragment Pat on User` would return "Pat"
+            fragment_name = definition.name
+
+            # Get the local we'll use.
+            local_name = ActiveSupport::Inflector.underscore(fragment_name)
+
+            fragments << [fragment_name, local_name]
+          end
 
           # Get the namespace
           const_name = ActiveSupport::Inflector.camelize(@filename
@@ -33,10 +40,16 @@ module GraphQL
             .gsub(/\.html\.erb$/, "") # Get rid of extension
           )
 
+          inject = fragments.map do |fragment_name, local_name|
+            <<-ERB
+              raise ArgumentError, "This template must be passed `#{local_name}`" unless local_assigns[:#{local_name}]
+              #{local_name} = #{const_name}::#{fragment_name}.new(#{local_name})
+            ERB
+          end
+
           input = input.gsub /<%graphql/, <<-ERB
           <%
-            raise ArgumentError, "This template must be passed `#{local_name}`" unless local_assigns[:#{local_name}]
-            #{local_name} = #{const_name}::#{fragment_name}.new(#{local_name})
+            #{inject.join("\n")}
           %>
           <%#
           ERB

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+echo "==> Installing gem dependencies…"
+bundle check --path vendor/gems 2>&1 > /dev/null || {
+  bundle install --path vendor/gems --without production
+}

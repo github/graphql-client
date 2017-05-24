@@ -23,6 +23,7 @@ module GraphQL
 
       initializer "graphql.configure_erb_implementation" do |_app|
         require "graphql/client/erubis"
+        require "graphql/client/action_view_patches"
         ActionView::Template::Handlers::ERB.erb_implementation = GraphQL::Client::Erubis
       end
 

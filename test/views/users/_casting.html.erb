@@ -1,0 +1,15 @@
+<%# Some comment %>
+<%graphql
+  fragment Me on User {
+    login
+  }
+
+  fragment You on User {
+    birthday
+  }
+%>
+
+<%= me.login %>
+<%= me.class.name %>
+<%= you.birthday %>
+<%= you.class.name %>

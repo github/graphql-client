@@ -18,6 +18,10 @@ module GraphQL
     # adapter. This class exists for trivial stock usage and allows for minimal
     # request header configuration.
     class HTTP
+      REDIRECT_LIMIT = 10
+
+      class TooManyRedirectsError < StandardError ; end
+
       # Public: Create HTTP adapter instance for a single GraphQL endpoint.
       #
       #   GraphQL::Client::HTTP.new("http://graphql-swapi.parseapp.com/") do
@@ -55,8 +59,13 @@ module GraphQL
       # context - An arbitrary Hash of values which you can access
       #
       # Returns { "data" => ... , "errors" => ... } Hash.
-      def execute(document:, operation_name: nil, variables: {}, context: {})
-        request = Net::HTTP::Post.new(uri.request_uri)
+      def execute(document:, operation_name: nil, variables: {}, context: {}, uri: nil, redirects: 0)
+        if redirects > REDIRECT_LIMIT
+          raise TooManyRedirectsError.new("Too many redirects (exceeded #{REDIRECT_LIMIT})")
+        end
+
+        uri = uri || @uri
+        request = Net::HTTP::Post.new(uri)
 
         request.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
@@ -70,10 +79,20 @@ module GraphQL
         body["operationName"] = operation_name if operation_name
         request.body = JSON.generate(body)
 
-        response = connection.request(request)
+        response = connection(uri: uri).request(request)
+
         case response
         when Net::HTTPOK, Net::HTTPBadRequest
           JSON.parse(response.body)
+        when Net::HTTPRedirection
+          execute(
+            document: document,
+            operation_name: operation_name,
+            variables: variables,
+            context: context,
+            uri: URI.parse(response["Location"]),
+            redirects: redirects + 1
+          )
         else
           { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }
         end
@@ -82,7 +101,7 @@ module GraphQL
       # Public: Extension point for subclasses to customize the Net:HTTP client
       #
       # Returns a Net::HTTP object
-      def connection
+      def connection(uri: @uri)
         Net::HTTP.new(uri.host, uri.port).tap do |client|
           client.use_ssl = uri.scheme == "https"
         end

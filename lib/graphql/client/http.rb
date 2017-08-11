@@ -85,6 +85,7 @@ module GraphQL
       def connection
         Net::HTTP.new(uri.host, uri.port).tap do |client|
           client.use_ssl = uri.scheme == "https"
+          client.read_timeout = read_timeout if respond_to? :read_timeout
         end
       end
     end

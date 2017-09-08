@@ -11,6 +11,7 @@ require "graphql/client/fragment_definition"
 require "graphql/client/operation_definition"
 require "graphql/client/query_typename"
 require "graphql/client/response"
+require "graphql/client/schema_input_coercions"
 require "graphql/client/schema"
 require "graphql/language/nodes/deep_freeze_ext"
 require "json"
@@ -91,6 +92,13 @@ module GraphQL
       @document_tracking_enabled = false
       @allow_dynamic_queries = false
       @enforce_collocated_callers = enforce_collocated_callers
+
+      # FIXME: Mutates schema argument instance
+      SchemaInputCoercions.each do |typename, coerce_input|
+        if type = @schema.types[typename]
+          type.coerce_input = coerce_input
+        end
+      end
 
       @types = Schema.generate(@schema)
     end
@@ -280,6 +288,27 @@ module GraphQL
         )
       ])
       parse(doc_ast.to_query_string, filename, lineno)
+    end
+
+    def coerce_variables(query, variables)
+      query.definition_node.variables.each_with_object({}) do |variable, h|
+        if variables.key?(variable.name.to_sym)
+          value = variables[variable.name.to_sym]
+        elsif variables.key?(variable.name)
+          value = variables[variable.name]
+        else
+          next
+        end
+
+        type = self.schema.type_from_ast(variable.type)
+
+        # TODO: Improve context stubbing
+        ctx = {}
+
+        value = type.coerce_input(value, ctx)
+        value = value.to_h if value.is_a?(GraphQL::Query::Arguments)
+        h[variable.name] = value
+      end
     end
 
     attr_reader :document

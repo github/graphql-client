@@ -1,9 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client"
-require "minitest/autorun"
-require "ostruct"
-require_relative "foo_helper"
+require "test_helper"
 
 class TestQueryResult < MiniTest::Test
   DateTime = GraphQL::ScalarType.define do

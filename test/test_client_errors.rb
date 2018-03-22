@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client"
-require "minitest/autorun"
+require "test_helper"
 
 class TestClientErrors < MiniTest::Test
   FooType = GraphQL::ObjectType.define do

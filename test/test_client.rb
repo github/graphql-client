@@ -1,8 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client"
-require "json"
-require "minitest/autorun"
+require "test_helper"
 
 class TestClient < MiniTest::Test
   NodeType = GraphQL::InterfaceType.define do

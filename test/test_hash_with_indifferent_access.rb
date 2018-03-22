@@ -1,6 +1,5 @@
 # frozen_string_literal: true
-require "graphql/client/hash_with_indifferent_access"
-require "minitest/autorun"
+require "test_helper"
 
 class TestHashWithIndifferentAccess < MiniTest::Test
   def test_string_access

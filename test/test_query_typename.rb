@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client/query_typename"
-require "minitest/autorun"
+require "test_helper"
 
 class TestQueryTypename < MiniTest::Test
   PersonType = GraphQL::ObjectType.define do

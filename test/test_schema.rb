@@ -1,8 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client/schema"
-require "minitest/autorun"
-require "time"
+require "test_helper"
 
 class TestSchemaType < MiniTest::Test
   DateTime = GraphQL::ScalarType.define do

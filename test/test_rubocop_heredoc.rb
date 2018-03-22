@@ -1,6 +1,5 @@
 # frozen_string_literal: true
-require "rubocop/cop/graphql/heredoc"
-require "minitest/autorun"
+require "test_helper"
 
 class TestRubocopHeredoc < MiniTest::Test
   def setup

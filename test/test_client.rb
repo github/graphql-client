@@ -75,8 +75,15 @@ class TestClient < MiniTest::Test
     end
   end
 
-  Schema = GraphQL::Schema.define(query: QueryType, mutation: MutationType) do
-    resolve_type ->(_type, _obj, _ctx) { raise NotImplementedError }
+  if GraphQL::VERSION > "1.8"
+    class Schema < GraphQL::Schema
+      query(QueryType)
+      mutation(MutationType)
+    end
+  else
+    Schema = GraphQL::Schema.define(query: QueryType, mutation: MutationType) do
+      resolve_type ->(_type, _obj, _ctx) { raise NotImplementedError }
+    end
   end
 
   module Temp

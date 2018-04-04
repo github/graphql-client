@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 require "graphql"
+if GraphQL::VERSION > "1.8"
+  GraphQL::DeprecatedDSL.activate
+end
+
 require "ostruct"
 require "time"
 require "json"

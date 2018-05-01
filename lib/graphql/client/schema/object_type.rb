@@ -54,6 +54,8 @@ module GraphQL
           name = name.to_s
           method_name = ActiveSupport::Inflector.underscore(name)
 
+          define_edge_enumeration if name == 'edges'
+
           define_method(method_name) do
             @casted_data.fetch(name) do
               @casted_data[name] = type.cast(@data[name], @errors.filter_by_path(name))
@@ -62,6 +64,22 @@ module GraphQL
 
           define_method("#{method_name}?") do
             @data[name] ? true : false
+          end
+        end
+
+        # Allows for items.map(&:some_field) rather than
+        # items.edges.map(&:node).map(&:some_field).
+        def define_edge_enumeration
+          self.include(Enumerable)
+
+          define_method(:each) do |&block|
+            if block.nil?
+              Enumerator.new do |y|
+                edges.each { |edge| y << edge.node }
+              end
+            else
+              edges.each { |edge| block.call(edge.node) }
+            end
           end
         end
 

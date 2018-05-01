@@ -545,6 +545,11 @@ class TestQueryResult < MiniTest::Test
     assert_equal "josh", data.users.edges[0].node.login
     assert_equal "mislav", data.users.edges[1].node.login
     assert_equal %w(josh mislav), data.users.edges.map(&:node).map(&:login)
+
+    assert_equal 2, data.users.count
+    assert_equal "josh", data.users.to_a[0].login
+    assert_equal "mislav", data.users.to_a[1].login
+    assert_equal %w(josh mislav), data.users.map(&:login)
   end
 
   def test_enum_values

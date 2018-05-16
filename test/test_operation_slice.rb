@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/language/nodes/deep_freeze_ext"
-require "minitest/autorun"
+require "test_helper"
 
 class TestDefinitionSlice < MiniTest::Test
   def test_slice_simple_query_operation

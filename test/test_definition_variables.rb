@@ -1,8 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client"
-require "graphql/client/definition_variables"
-require "minitest/autorun"
+require "test_helper"
 
 class TestDefinitionVariables < MiniTest::Test
   GraphQL::DeprecatedDSL.activate if GraphQL::VERSION > "1.8"

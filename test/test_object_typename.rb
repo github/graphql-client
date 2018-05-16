@@ -1,8 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client"
-require "minitest/autorun"
-require "ostruct"
+require "test_helper"
 
 class TestObjectTypename < MiniTest::Test
   GraphQL::DeprecatedDSL.activate if GraphQL::VERSION > "1.8"

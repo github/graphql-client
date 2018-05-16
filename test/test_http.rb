@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql"
-require "graphql/client/http"
-require "minitest/autorun"
+require "test_helper"
 
 class TestHTTP < MiniTest::Test
   SWAPI = GraphQL::Client::HTTP.new("https://mpjk0plp9.lp.gql.zone/graphql") do

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql/client/erubis"
-require "rubocop/cop/graphql/overfetch"
-require "minitest/autorun"
+require "test_helper"
 
 class TestRubocopOverfetch < MiniTest::Test
   Root = File.expand_path("..", __FILE__)

@@ -1,12 +1,5 @@
 # frozen_string_literal: true
-require "erubi"
-require "erubis"
-require "graphql"
-require "graphql/client/erubi_enhancer"
-require "graphql/client/erubis_enhancer"
-require "graphql/client/erubis"
-require "graphql/client/view_module"
-require "minitest/autorun"
+require "test_helper"
 
 class TestErubis < MiniTest::Test
   class ErubiEngine < Erubi::Engine

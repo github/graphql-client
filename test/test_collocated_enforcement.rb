@@ -1,7 +1,5 @@
 # frozen_string_literal: true
-require "graphql/client/collocated_enforcement"
-require "minitest/autorun"
-require_relative "foo_helper"
+require "test_helper"
 
 class TestCollocatedEnforcement < MiniTest::Test
   include FooHelper

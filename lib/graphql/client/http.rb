@@ -60,15 +60,18 @@ module GraphQL
 
         request.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
-        request["Accept"] = "application/json"
-        request["Content-Type"] = "application/json"
-        headers(context).each { |name, value| request[name] = value }
-
         body = {}
         body["query"] = document.to_query_string
         body["variables"] = variables if variables.any?
         body["operationName"] = operation_name if operation_name
-        request.body = JSON.generate(body)
+        request_body = JSON.generate(body)
+        context["request_body"] = request_body
+
+        request.body = request_body
+
+        request["Accept"] = "application/json"
+        request["Content-Type"] = "application/json"
+        headers(context).each { |name, value| request[name] = value }
 
         response = connection.request(request)
         case response

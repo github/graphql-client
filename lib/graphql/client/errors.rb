@@ -21,8 +21,7 @@ module GraphQL
         errors.each do |error|
           path = ["data"]
           current = data
-          error.delete("path") if error.key?("path") && error["path"].nil?
-          error.fetch("path", []).each do |key|
+          (error["path"] ||= []).each do |key|
             break unless current
             path << key
             current = current[key]

@@ -14,7 +14,6 @@ module GraphQL
     #
     class Railtie < Rails::Railtie
       config.graphql = ActiveSupport::OrderedOptions.new
-      config.graphql.client = GraphQL::Client.new
 
       initializer "graphql.configure_log_subscriber" do |_app|
         require "graphql/client/log_subscriber"
@@ -26,10 +25,10 @@ module GraphQL
         ActionView::Template::Handlers::ERB.erb_implementation = GraphQL::Client::ERB
       end
 
-      initializer "graphql.configure_views_namespace" do |app|
+      config.after_initialize do |app|
         require "graphql/client/view_module"
 
-        path = app.paths["app/views"].first
+        path = config.graphql.client_views_path || app.paths["app/views"].first
 
         # TODO: Accessing config.graphql.client during the initialization
         # process seems error prone. The application may reassign

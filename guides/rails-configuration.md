@@ -14,26 +14,22 @@ gem 'graphql-client'
 
 ### Configure
 
-This part is temporarily a mess due to railtie and application initialization order.
+First run the initializer:
+
+```
+$ rails generate graphql_client:install
+```
+
+This will generate the file `config/initializers/graphql-client.rb`. Change this to use a client with your settings.
 
 ```ruby
-require "graphql/client/railtie"
-require "graphql/client/http"
+client = GraphQL::Client.new(schema: "db/schema.json", execute: GraphQL::Client::HTTP.new("https://foo.com/"))
 
-module Foo
-  HTTP = GraphQL::Client::HTTP.new("https://foo.com/")
-  # TODO: Rails.root isn't available yet :(
-  Client = GraphQL::Client.new(schema: "db/schema.json", execute: HTTP)
+config.graphql.client = client
 
-  class Application < Rails::Application
-    # Set config.graphql.client to configure the client instance ERB templates
-    # will be parsed against.
-    #
-    # client must be set before initializers run. config/initializers/*
-    # are ran after graphql-client initializers so thats too late.
-    config.graphql.client = Client
-  end
-end
+# optional change the location of the views. Defaults to: `app/views`
+# Rails.application.config.graphql.client_views_path = Rails.root.join('path/to/views').to_path
+
 ```
 
 ### Define a schema updater rake task

@@ -120,13 +120,21 @@ module GraphQL
 
       definition_dependencies = Set.new
 
+      # Replace Ruby constant reference with GraphQL fragment names,
+      # while populating `definition_dependencies` with
+      # GraphQL Fragment ASTs which this operation depends on
       str = str.gsub(/\.\.\.([a-zA-Z0-9_]+(::[a-zA-Z0-9_]+)*)/) do
         match = Regexp.last_match
         const_name = match[1]
 
         if str.match(/fragment\s*#{const_name}/)
+          # It's a fragment _definition_, not a fragment usage
           match[0]
         else
+          # It's a fragment spread, so we should load the fragment
+          # which corresponds to the spread.
+          # We depend on ActiveSupport to either find the already-loaded
+          # constant, or to load the constant by name
           begin
             fragment = ActiveSupport::Inflector.constantize(const_name)
           rescue NameError
@@ -135,6 +143,10 @@ module GraphQL
 
           case fragment
           when FragmentDefinition
+            # We found the fragment definition that this fragment spread belongs to.
+            # So, register the AST of this fragment in `definition_dependencies`
+            # and update the query string to valid GraphQL syntax,
+            # replacing the Ruby constant
             definition_dependencies.merge(fragment.document.definitions)
             "...#{fragment.definition_name}"
           else
@@ -157,10 +169,17 @@ module GraphQL
       doc = GraphQL.parse(str)
 
       document_types = DocumentTypes.analyze_types(self.schema, doc).freeze
-      QueryTypename.insert_typename_fields(doc, types: document_types)
+      doc = QueryTypename.insert_typename_fields(doc, types: document_types)
 
       doc.definitions.each do |node|
-        node.name ||= "__anonymous__"
+        if node.name.nil?
+          if node.respond_to?(:merge) # GraphQL 1.9 +
+            node_with_name = node.merge(name: "__anonymous__")
+            doc = doc.replace_child(node, node_with_name)
+          else
+            node.name = "__anonymous__"
+          end
+        end
       end
 
       document_dependencies = Language::Nodes::Document.new(definitions: doc.definitions + definition_dependencies.to_a)
@@ -183,20 +202,10 @@ module GraphQL
 
       definitions = {}
       doc.definitions.each do |node|
-        irep_node = case node
-        when GraphQL::Language::Nodes::OperationDefinition
-          errors[:irep].operation_definitions[node.name]
-        when GraphQL::Language::Nodes::FragmentDefinition
-          errors[:irep].fragment_definitions[node.name]
-        else
-          raise TypeError, "unexpected #{node.class}"
-        end
-
-        node.name = nil if node.name == "__anonymous__"
         sliced_document = Language::DefinitionSlice.slice(document_dependencies, node.name)
         definition = Definition.for(
           client: self,
-          irep_node: irep_node,
+          ast_node: node,
           document: sliced_document,
           source_document: doc,
           source_location: source_location
@@ -205,18 +214,26 @@ module GraphQL
       end
 
       name_hook = RenameNodeHook.new(definitions)
-      visitor = Language::Visitor.new(doc)
+      visitor = Language::Visitor.new(document_dependencies)
       visitor[Language::Nodes::FragmentDefinition].leave << name_hook.method(:rename_node)
       visitor[Language::Nodes::OperationDefinition].leave << name_hook.method(:rename_node)
       visitor[Language::Nodes::FragmentSpread].leave << name_hook.method(:rename_node)
       visitor.visit
 
-      doc.deep_freeze
+      if !doc.respond_to?(:merge)
+        doc.deep_freeze # 1.9 introduced immutable AST nodes, so we skip this on 1.9+
+      end
 
-      document.definitions.concat(doc.definitions) if document_tracking_enabled
+      if document_tracking_enabled
+        if @document.respond_to?(:merge) # GraphQL 1.9+
+          @document = @document.merge(definitions: @document.definitions + doc.definitions)
+        else
+          @document.definitions.concat(doc.definitions)
+        end
+      end
 
-      if definitions[nil]
-        definitions[nil]
+      if definitions["__anonymous__"]
+        definitions["__anonymous__"]
       else
         Module.new do
           definitions.each do |name, definition|
@@ -235,7 +252,7 @@ module GraphQL
         definition = @definitions[node.name]
         if definition
           node.extend(LazyName)
-          node.name = -> { definition.definition_name }
+          node.name_proc = -> { definition.definition_name }
         end
       end
     end
@@ -358,8 +375,10 @@ module GraphQL
     # name to point to a lazily defined Proc instead of a static string.
     module LazyName
       def name
-        @name.call
+        @name_proc.call
       end
+
+      attr_writer :name_proc
     end
 
     private

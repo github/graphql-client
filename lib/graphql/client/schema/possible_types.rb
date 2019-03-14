@@ -41,7 +41,7 @@ module GraphQL
             if type = possible_types[typename]
               type.cast(value, errors)
             else
-              raise InvariantError, "expected value to be one of (#{possible_types.keys.join(", ")}), but was #{typename}"
+              raise InvariantError, "expected value to be one of (#{possible_types.keys.join(", ")}), but was #{typename.inspect}"
             end
           when NilClass
             nil

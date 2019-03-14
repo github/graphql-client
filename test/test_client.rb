@@ -7,87 +7,81 @@ require "minitest/autorun"
 class TestClient < MiniTest::Test
   GraphQL::DeprecatedDSL.activate if GraphQL::VERSION > "1.8"
 
-  NodeType = GraphQL::InterfaceType.define do
-    name "Node"
-    field :id, !types.ID
+  module NodeType
+    include GraphQL::Schema::Interface
+    field :id, ID, null: false
   end
 
-  AdminUser = GraphQL::InterfaceType.define do
-    name "AdminUser"
-    field :password, !types.String
+  module AdminUser
+    include GraphQL::Schema::Interface
+    field :password, String, null: false
   end
 
-  UserType = GraphQL::ObjectType.define do
-    name "User"
-    interfaces [NodeType, AdminUser]
-    field :id, !types.ID
-    field :firstName, !types.String
-    field :lastName, !types.String
-    field :name, !types.String
-    field :login, !types.String
-    field :login_url, !types.String
-    field :profileName, !types.String
-    field :isCool, !types.Boolean
-    field :profilePic, types.String do
-      argument :size, types.Int
-    end
-    field :repositories, !types[!RepositoryType]
-    field :friends, -> { !types[!UserType] } do
-      argument :first, types.Int
-    end
-    field :mutualFriends, -> { !types[!UserType] } do
-      argument :first, types.Int
-    end
-  end
 
-  OrganizationType = GraphQL::ObjectType.define do
-    name "Organization"
-    interfaces [NodeType]
-    field :name, !types.String
-  end
-
-  RepositoryType = GraphQL::ObjectType.define do
-    name "Repository"
-    field :name, !types.String
-    field :owner, !UserType
-    field :starCount, !types.Int
-    field :watchers, -> { !types[!UserType] }
-  end
-
-  QueryType = GraphQL::ObjectType.define do
-    name "Query"
-    field :viewer, !UserType
-    field :node, NodeType do
-      argument :id, !types.ID
+  class UserType < GraphQL::Schema::Object
+    implements NodeType
+    implements AdminUser
+    field :id, ID, null: false
+    field :first_name, String, null: false
+    field :last_name, String, null: false
+    field :name, String, null: false
+    field :login, String, null: false
+    field :login_url, String, null: false
+    field :profile_name, String, null: false
+    field :is_cool, Boolean, null: false
+    field :profile_pic, String, null: true do
+      argument :size, Int, required: false
     end
-    field :user, UserType do
-      argument :id, !types.ID
+    field :repositories, "[TestClient::RepositoryType]", null: false
+    field :friends, [UserType], null: false do
+      argument :first, Int, required: false
     end
-    field :organization, OrganizationType do
-      argument :id, !types.ID
+    field :mutual_friends, [UserType], null: false do
+      argument :first, Int, required: false
     end
   end
 
-  StarResult = GraphQL::ObjectType.define do
-    name "StarResult"
-    field :repository, !RepositoryType
+  class OrganizationType < GraphQL::Schema::Object
+    implements NodeType
+    field :name, String, null: false
   end
 
-  MutationType = GraphQL::ObjectType.define do
-    name "Mutation"
-    field :star, !StarResult do
-      argument :repositoryID, !types.ID
+  class RepositoryType < GraphQL::Schema::Object
+    field :name, String, null: false
+    field :owner, UserType, null: false
+    field :star_count, Integer, null: false
+    field :watchers, [UserType], null: false
+  end
+
+  class QueryType < GraphQL::Schema::Object
+    field :viewer, UserType, null: false
+    field :node, NodeType, null: true do
+      argument :id, ID, required: false
+    end
+    field :user, UserType, null: true do
+      argument :id, ID, required: true
+    end
+    field :organization, OrganizationType, null: true do
+      argument :id, ID, required: true
     end
   end
 
-  if GraphQL::VERSION > "1.8"
-    class Schema < GraphQL::Schema
-      query(QueryType)
-      mutation(MutationType)
+  class StarResult < GraphQL::Schema::Object
+    field :repository, RepositoryType, null: false
+  end
+
+  class MutationType < GraphQL::Schema::Object
+    field :star, StarResult, null: false do
+      argument :repository_id, ID, required: true
     end
-  else
-    Schema = GraphQL::Schema.define(query: QueryType, mutation: MutationType) do
-      resolve_type ->(_type, _obj, _ctx) { raise NotImplementedError }
+  end
+
+  class Schema < GraphQL::Schema
+    query(QueryType)
+    mutation(MutationType)
+    if GraphQL::VERSION > "1.9"
+      use GraphQL::Execution::Interpreter
+      use GraphQL::Analysis::AST
     end
   end
 
@@ -95,7 +89,7 @@ class TestClient < MiniTest::Test
   end
 
   def setup
-    @client = GraphQL::Client.new(schema: Schema)
+    @client = GraphQL::Client.new(schema: Schema.graphql_definition)
     @client.document_tracking_enabled = true
   end
 
@@ -208,7 +202,7 @@ class TestClient < MiniTest::Test
   def test_client_parse_anonymous_mutation
     Temp.const_set :StarMutation, @client.parse(<<-'GRAPHQL')
       mutation {
-        star(repositoryID: 12345) {
+        star(repositoryId: 12345) {
           repository {
             starCount
           }
@@ -218,7 +212,7 @@ class TestClient < MiniTest::Test
 
     query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
       mutation TestClient__Temp__StarMutation {
-        star(repositoryID: 12345) {
+        star(repositoryId: 12345) {
           repository {
             starCount
           }
@@ -241,7 +235,7 @@ class TestClient < MiniTest::Test
   def test_client_parse_mutation_document
     Temp.const_set :StarDocument, @client.parse(<<-'GRAPHQL')
       mutation StarRepo {
-        star(repositoryID: 12345) {
+        star(repositoryId: 12345) {
           repository {
             starCount
           }
@@ -251,7 +245,7 @@ class TestClient < MiniTest::Test
 
     query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
       mutation TestClient__Temp__StarDocument__StarRepo {
-        star(repositoryID: 12345) {
+        star(repositoryId: 12345) {
           repository {
             starCount
           }
@@ -324,6 +318,12 @@ class TestClient < MiniTest::Test
   end
 
   def test_client_parse_query_fragment_document
+    Temp.const_set :StandardProfilePic, @client.parse(<<-'GRAPHQL')
+      fragment on User {
+        profilePic(size: 50)
+      }
+    GRAPHQL
+
     Temp.const_set :UserDocument, @client.parse(<<-'GRAPHQL')
       query NestedFragments {
         user(id: 4) {
@@ -339,15 +339,15 @@ class TestClient < MiniTest::Test
       fragment FriendFields on User {
         id
         name
-        ...StandardProfilePic
-      }
-
-      fragment StandardProfilePic on User {
-        profilePic(size: 50)
+        ...TestClient::Temp::StandardProfilePic
       }
     GRAPHQL
 
     assert_equal(<<-'GRAPHQL'.gsub(/^      /, "").chomp, @client.document.to_query_string)
+      fragment TestClient__Temp__StandardProfilePic on User {
+        profilePic(size: 50)
+      }
+
       query TestClient__Temp__UserDocument__NestedFragments {
         user(id: 4) {
           friends(first: 10) {
@@ -362,11 +362,7 @@ class TestClient < MiniTest::Test
       fragment TestClient__Temp__UserDocument__FriendFields on User {
         id
         name
-        ...TestClient__Temp__UserDocument__StandardProfilePic
-      }
-
-      fragment TestClient__Temp__UserDocument__StandardProfilePic on User {
-        profilePic(size: 50)
+        ...TestClient__Temp__StandardProfilePic
       }
     GRAPHQL
 
@@ -385,10 +381,10 @@ class TestClient < MiniTest::Test
       fragment TestClient__Temp__UserDocument__FriendFields on User {
         id
         name
-        ...TestClient__Temp__UserDocument__StandardProfilePic
+        ...TestClient__Temp__StandardProfilePic
       }
 
-      fragment TestClient__Temp__UserDocument__StandardProfilePic on User {
+      fragment TestClient__Temp__StandardProfilePic on User {
         profilePic(size: 50)
       }
     GRAPHQL
@@ -397,20 +393,20 @@ class TestClient < MiniTest::Test
       fragment TestClient__Temp__UserDocument__FriendFields on User {
         id
         name
-        ...TestClient__Temp__UserDocument__StandardProfilePic
+        ...TestClient__Temp__StandardProfilePic
       }
 
-      fragment TestClient__Temp__UserDocument__StandardProfilePic on User {
+      fragment TestClient__Temp__StandardProfilePic on User {
         profilePic(size: 50)
       }
     GRAPHQL
 
     query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
-      fragment TestClient__Temp__UserDocument__StandardProfilePic on User {
+      fragment TestClient__Temp__StandardProfilePic on User {
         profilePic(size: 50)
       }
     GRAPHQL
-    assert_equal(query_string, Temp::UserDocument::StandardProfilePic.document.to_query_string)
+    assert_equal(query_string, Temp::StandardProfilePic.document.to_query_string)
   end
 
   def test_client_parse_query_external_fragments_document

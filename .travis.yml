@@ -3,33 +3,16 @@ language: ruby
 cache: bundler
 
 rvm:
-  - 2.1.10
-  - 2.2.10
   - 2.3.7
   - 2.4.4
   - 2.5.1
 
 env:
-  - RAILS_VERSION=5.1.6 GRAPHQL_VERSION=1.6.6
-  - RAILS_VERSION=5.1.6 GRAPHQL_VERSION=1.8.5
-  - RAILS_VERSION=3.2.22.5
-  - RAILS_VERSION=4.2.10
-  - RAILS_VERSION=5.0.7
+  - RAILS_VERSION=5.1.6 GRAPHQL_VERSION=1.8.11
   - RAILS_VERSION=5.1.6
   - RAILS_VERSION=5.2.0
 
 matrix:
   include:
-  - rvm: 2.1.10
-    env: RAILS_VERSION=4.2.10 GRAPHQL_VERSION=1.6.6
-  exclude:
-  - rvm: 2.1.10
-    env: RAILS_VERSION=5.1.6 GRAPHQL_VERSION=1.6.6
-  - rvm: 2.1.10
-    env: RAILS_VERSION=5.1.6 GRAPHQL_VERSION=1.8.5
-  - rvm: 2.1.10
-    env: RAILS_VERSION=5.0.7
-  - rvm: 2.1.10
-    env: RAILS_VERSION=5.1.6
-  - rvm: 2.1.10
-    env: RAILS_VERSION=5.2.0
+  - rvm: 2.5.1
+    env: RAILS_VERSION=5.2.0 GRAPHQL_VERSION=1.9-dev

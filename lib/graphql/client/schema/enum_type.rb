@@ -36,7 +36,7 @@ module GraphQL
           @values.freeze
         end
 
-        def define_class(definition, irep_node)
+        def define_class(definition, ast_nodes)
           self
         end
 

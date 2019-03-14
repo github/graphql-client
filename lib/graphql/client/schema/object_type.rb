@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-
 require "active_support/inflector"
 require "graphql/client/error"
 require "graphql/client/errors"
@@ -20,22 +19,38 @@ module GraphQL
           end
         end
 
-        def define_class(definition, irep_node)
-          fields = irep_node.typed_children[type].inject({}) { |h, (field_name, field_irep_node)|
-            definition_for_field = definition.indexes[:definitions][field_irep_node.ast_node]
-
-            # Ignore fields defined in other documents.
-            if definition.source_document.definitions.include?(definition_for_field)
-              h[field_name.to_sym] = schema_module.define_class(definition, field_irep_node, field_irep_node.definition.type)
+        def define_class(definition, ast_nodes)
+          # First, gather all the ast nodes representing a certain selection, by name.
+          # We gather AST nodes into arrays so that multiple selections can be grouped, for example:
+          #
+          #   {
+          #     f1 { a b }
+          #     f1 { b c }
+          #   }
+          #
+          # should be treated like `f1 { a b c }`
+          field_nodes = {}
+          ast_nodes.each do |ast_node|
+            ast_node.selections.each do |selected_ast_node|
+              gather_selections(field_nodes, definition, selected_ast_node)
             end
-            h
-          }
+          end
+
+          # After gathering all the nodes by name, prepare to create methods and classes for them.
+          field_classes = {}
+          field_nodes.each do |result_name, field_ast_nodes|
+            # `result_name` might be an alias, so make sure to get the proper name
+            field_name = field_ast_nodes.first.name
+            field_definition = definition.client.schema.get_field(type.name, field_name)
+            field_return_type = field_definition.type
+            field_classes[result_name.to_sym] = schema_module.define_class(definition, field_ast_nodes, field_return_type)
+          end
 
           Class.new(self) do
-            define_fields(fields)
+            define_fields(field_classes)
 
             if definition.client.enforce_collocated_callers
-              keys = fields.keys.map { |key| ActiveSupport::Inflector.underscore(key) }
+              keys = field_classes.keys.map { |key| ActiveSupport::Inflector.underscore(key) }
               Client.enforce_collocated_callers(self, keys, definition.source_location[0])
             end
 
@@ -45,7 +60,7 @@ module GraphQL
             end
 
             @source_definition = definition
-            @_spreads = definition.indexes[:spreads][irep_node.ast_node]
+            @_spreads = definition.indexes[:spreads][ast_nodes.first]
           end
         end
 
@@ -76,6 +91,57 @@ module GraphQL
             nil
           else
             raise InvariantError, "expected value to be a Hash, but was #{value.class}"
+          end
+        end
+
+        private
+
+        # Given an AST selection on this object, gather it into `fields` if it applies.
+        # If it's a fragment, continue recursively checking the selections on the fragment.
+        def gather_selections(fields, definition, selected_ast_node)
+          case selected_ast_node
+          when GraphQL::Language::Nodes::InlineFragment
+            continue_selection = if selected_ast_node.type.nil?
+              true
+            else
+              schema = definition.client.schema
+              type_condition = schema.types[selected_ast_node.type.name]
+              applicable_types = schema.possible_types(type_condition)
+              # continue if this object type is one of the types matching the fragment condition
+              applicable_types.include?(type)
+            end
+
+            if continue_selection
+              selected_ast_node.selections.each do |next_selected_ast_node|
+                gather_selections(fields, definition, next_selected_ast_node)
+              end
+            end
+          when GraphQL::Language::Nodes::FragmentSpread
+            fragment_definition = definition.document.definitions.find do |defn|
+              defn.is_a?(GraphQL::Language::Nodes::FragmentDefinition) && defn.name == selected_ast_node.name
+            end
+
+            schema = definition.client.schema
+            type_condition = schema.types[fragment_definition.type.name]
+            applicable_types = schema.possible_types(type_condition)
+            # continue if this object type is one of the types matching the fragment condition
+            continue_selection = applicable_types.include?(type)
+
+            if continue_selection
+              fragment_definition.selections.each do |next_selected_ast_node|
+                gather_selections(fields, definition, next_selected_ast_node)
+              end
+            end
+          when GraphQL::Language::Nodes::Field
+            operation_definition_for_field = definition.indexes[:definitions][selected_ast_node]
+            # Ignore fields defined in other documents.
+            if definition.source_document.definitions.include?(operation_definition_for_field)
+              field_method_name = selected_ast_node.alias || selected_ast_node.name
+              ast_nodes = fields[field_method_name] ||= []
+              ast_nodes << selected_ast_node
+            end
+          else
+            raise "Unexpected selection node: #{selected_ast_node}"
           end
         end
       end

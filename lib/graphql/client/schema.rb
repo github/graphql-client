@@ -15,23 +15,25 @@ module GraphQL
   class Client
     module Schema
       module ClassMethods
-        def define_class(definition, irep_node, type)
-          type_klass = case type
+        def define_class(definition, ast_nodes, type)
+          type_class = case type
           when GraphQL::NonNullType
-            define_class(definition, irep_node, type.of_type).to_non_null_type
+            define_class(definition, ast_nodes, type.of_type).to_non_null_type
           when GraphQL::ListType
-            define_class(definition, irep_node, type.of_type).to_list_type
+            define_class(definition, ast_nodes, type.of_type).to_list_type
           else
-            get_class(type.name).define_class(definition, irep_node)
+            get_class(type.name).define_class(definition, ast_nodes)
           end
 
-          irep_node.ast_node.directives.inject(type_klass) do |klass, directive|
-            if directive = self.directives[directive.name.to_sym]
-              directive.new(klass)
-            else
-              klass
+          ast_nodes.each do |ast_node|
+            ast_node.directives.each do |directive|
+              if directive = self.directives[directive.name.to_sym]
+                type_class = directive.new(type_class)
+              end
             end
           end
+
+          type_class
         end
 
         def get_class(type_name)

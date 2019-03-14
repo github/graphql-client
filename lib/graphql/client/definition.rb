@@ -14,24 +14,43 @@ module GraphQL
     #
     # Definitions MUST be assigned to a constant.
     class Definition < Module
-      def self.for(irep_node:, **kargs)
-        case irep_node.ast_node
+      def self.for(ast_node:, **kargs)
+        case ast_node
         when Language::Nodes::OperationDefinition
-          OperationDefinition.new(irep_node: irep_node, **kargs)
+          OperationDefinition.new(ast_node: ast_node, **kargs)
         when Language::Nodes::FragmentDefinition
-          FragmentDefinition.new(irep_node: irep_node, **kargs)
+          FragmentDefinition.new(ast_node: ast_node, **kargs)
         else
-          raise TypeError, "expected node to be a definition type, but was #{irep_node.ast_node.class}"
+          raise TypeError, "expected node to be a definition type, but was #{ast_node.class}"
         end
       end
 
-      def initialize(client:, document:, source_document:, irep_node:, source_location:)
+      def initialize(client:, document:, source_document:, ast_node:, source_location:)
         @client = client
         @document = document
         @source_document = source_document
-        @definition_node = irep_node.ast_node
+        @definition_node = ast_node
         @source_location = source_location
-        @schema_class = client.types.define_class(self, irep_node, irep_node.return_type)
+
+        definition_type = case ast_node
+        when GraphQL::Language::Nodes::OperationDefinition
+          case ast_node.operation_type
+          when "mutation"
+            @client.schema.mutation
+          when "subscription"
+            @client.schema.subscription
+          when "query", nil
+            @client.schema.query
+          else
+            raise "Unexpected operation_type: #{ast_node.operation_type}"
+          end
+        when GraphQL::Language::Nodes::FragmentDefinition
+          @client.schema.types[ast_node.type.name]
+        else
+          raise "Unexpected ast_node: #{ast_node}"
+        end
+
+        @schema_class = client.types.define_class(self, [ast_node], definition_type)
       end
 
       # Internal: Get associated owner GraphQL::Client instance.
@@ -89,9 +108,9 @@ module GraphQL
         when GraphQL::Client::Schema::PossibleTypes
           case obj
           when NilClass
-            nil
+            obj
           else
-            schema_class.cast(obj.to_h, obj.errors)
+            cast_object(obj)
           end
         when GraphQL::Client::Schema::ObjectType
           case obj
@@ -100,14 +119,7 @@ module GraphQL
           when Hash
             schema_class.new(obj, errors)
           else
-            if obj.class.is_a?(GraphQL::Client::Schema::ObjectType)
-              unless obj.class._spreads.include?(definition_node.name)
-                raise TypeError, "#{definition_node.name} is not included in #{obj.class.source_definition.name}"
-              end
-              schema_class.cast(obj.to_h, obj.errors)
-            else
-              raise TypeError, "unexpected #{obj.class}"
-            end
+            cast_object(obj)
           end
         else
           raise TypeError, "unexpected #{schema_class}"
@@ -126,6 +138,18 @@ module GraphQL
       end
 
       private
+
+        def cast_object(obj)
+          if obj.class.is_a?(GraphQL::Client::Schema::ObjectType)
+            unless obj.class._spreads.include?(definition_node.name)
+              raise TypeError, "#{definition_node.name} is not included in #{obj.class.source_definition.name}"
+            end
+            schema_class.cast(obj.to_h, obj.errors)
+          else
+            raise TypeError, "unexpected #{obj.class}"
+          end
+        end
+
         def index_spreads(visitor)
           spreads = {}
           on_node = ->(node, _parent) { spreads[node] = Set.new(flatten_spreads(node).map(&:name)) }

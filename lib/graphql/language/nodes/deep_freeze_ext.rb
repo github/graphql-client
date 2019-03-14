@@ -10,6 +10,7 @@ module GraphQL
         #
         # Returns self Node.
         def deep_freeze
+          scalars # load internal state
           children.each(&:deep_freeze)
           scalars.each { |s| s && s.freeze }
           freeze

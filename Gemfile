@@ -6,7 +6,7 @@ rails_version = ENV["RAILS_VERSION"] == "edge" ? { github: "rails/rails" } : ENV
 gem "actionpack", rails_version
 gem "activesupport", rails_version
 
-graphql_version = ENV["GRAPHQL_VERSION"] == "1.9-dev" ? { github: "rmosolgo/graphql-ruby", branch: "1.9-dev" } : ENV["GRAPHQL_VERSION"]
+graphql_version = ENV["GRAPHQL_VERSION"] == "1.10-dev" ? { github: "rmosolgo/graphql-ruby", branch: "1.10-dev" } : ENV["GRAPHQL_VERSION"]
 if graphql_version
   gem "graphql", graphql_version
 end

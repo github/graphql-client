@@ -68,7 +68,10 @@ module GraphQL
       end
     end
 
-    IntrospectionDocument = GraphQL.parse(GraphQL::Introspection::INTROSPECTION_QUERY).deep_freeze
+    IntrospectionDocument = GraphQL.parse(GraphQL::Introspection::INTROSPECTION_QUERY)
+    if Gem::Version.new(GraphQL::VERSION) <= Gem::Version.new("1.8")
+      IntrospectionDocument.deep_freeze # 1.9 introduced immutable AST nodes, so we skip this on 1.9+
+    end
 
     def self.dump_schema(schema, io = nil, context: {})
       unless schema.respond_to?(:execute)
@@ -221,7 +224,7 @@ module GraphQL
       visitor[Language::Nodes::FragmentSpread].leave << name_hook.method(:rename_node)
       visitor.visit
 
-      if !doc.respond_to?(:merge)
+      unless doc.respond_to?(:merge)
         doc.deep_freeze # 1.9 introduced immutable AST nodes, so we skip this on 1.9+
       end
 

@@ -78,6 +78,28 @@ class TestClientErrors < MiniTest::Test
     assert_equal expected, actual
 
     actual = {
+      "data" => nil,
+      "errors" => [
+        {
+          "message" => "error",
+          "path" => nil
+        }
+      ]
+    }
+    GraphQL::Client::Errors.normalize_error_paths(actual["data"], actual["errors"])
+    expected = {
+      "data" => nil,
+      "errors" => [
+        {
+          "message" => "error",
+          "path" => nil,
+          "normalizedPath" => %w(data)
+        }
+      ]
+    }
+    assert_equal expected, actual
+
+    actual = {
       "data" => {
         "node" => nil
       },

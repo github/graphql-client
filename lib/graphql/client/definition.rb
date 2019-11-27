@@ -5,6 +5,7 @@ require "graphql/client/collocated_enforcement"
 require "graphql/client/schema/object_type"
 require "graphql/client/schema/possible_types"
 require "set"
+require "digest"
 
 module GraphQL
   class Client
@@ -89,7 +90,9 @@ module GraphQL
         if name
           @definition_name = name.gsub("::", "__").freeze
         else
-          "#{self.class.name}_#{object_id}".gsub("::", "__").freeze
+          query_body = document.definitions[0].children[0].to_query_string
+          digest = Digest::MD5.hexdigest(query_body)
+          "#{self.class.name}_#{digest}".gsub("::", "__").freeze
         end
       end
 

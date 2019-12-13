@@ -22,7 +22,7 @@ module GraphQL
       #
       #   GraphQL::Client::HTTP.new("http://graphql-swapi.parseapp.com/") do
       #     def headers(context)
-      #       { "User-Agent": "My Client" }
+      #       { "User-Agent" => "My Client" }
       #     end
       #   end
       #

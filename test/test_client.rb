@@ -199,6 +199,36 @@ class TestClient < MiniTest::Test
     assert_equal(query_string, Temp::UserDocument::GetUser.document.to_query_string)
   end
 
+  def test_client_parse_query_document_non_capitalized_query_name
+    Temp.const_set :UserDocument, @client.parse(<<-'GRAPHQL')
+      query getUser {
+        viewer {
+          id
+        }
+      }
+    GRAPHQL
+
+    assert_kind_of GraphQL::Client::OperationDefinition, Temp::UserDocument::GetUser
+    assert_equal "TestClient::Temp::UserDocument", Temp::UserDocument.name
+    assert_equal "TestClient::Temp::UserDocument::GetUser", Temp::UserDocument::GetUser.name
+    assert_equal "TestClient__Temp__UserDocument__GetUser", Temp::UserDocument::GetUser.definition_name
+
+    assert_kind_of GraphQL::Language::Nodes::OperationDefinition, Temp::UserDocument::GetUser.definition_node
+    assert_equal "TestClient__Temp__UserDocument__GetUser", Temp::UserDocument::GetUser.definition_node.name
+    assert_equal "query", Temp::UserDocument::GetUser.definition_node.operation_type
+
+    query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
+      query TestClient__Temp__UserDocument__GetUser {
+        viewer {
+          id
+        }
+      }
+    GRAPHQL
+
+    assert_equal(query_string, @client.document.to_query_string)
+    assert_equal(query_string, Temp::UserDocument::GetUser.document.to_query_string)
+  end
+
   def test_client_parse_anonymous_mutation
     Temp.const_set :StarMutation, @client.parse(<<-'GRAPHQL')
       mutation {

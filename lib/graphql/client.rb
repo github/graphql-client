@@ -227,7 +227,8 @@ module GraphQL
       else
         Module.new do
           definitions.each do |name, definition|
-            const_set(name, definition)
+            module_name = name.sub(/\S/, &:upcase)
+            const_set(module_name, definition)
           end
         end
       end

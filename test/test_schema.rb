@@ -308,10 +308,12 @@ class TestSchemaType < MiniTest::Test
   def test_transform_lowercase_type_name
     person_type = GraphQL::ObjectType.define do
       name "person"
+      field :first_name, GraphQL::STRING_TYPE
     end
 
     photo_type = GraphQL::ObjectType.define do
       name "photo"
+      field :name, GraphQL::STRING_TYPE
     end
 
     search_result_union = GraphQL::UnionType.define do
@@ -355,7 +357,7 @@ class TestSchemaType < MiniTest::Test
       resolve_type ->(_type, _obj, _ctx) { raise NotImplementedError }
     end
 
-    assert_raises ArgumentError do
+    assert_raises GraphQL::Schema::InvalidTypeError do
       GraphQL::Client::Schema.generate(schema)
     end
   end

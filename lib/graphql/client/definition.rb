@@ -25,7 +25,14 @@ module GraphQL
         end
       end
 
-      def initialize(client:, document:, source_document:, ast_node:, source_location:)
+      def initialize(
+        client:,
+        document:,
+        source_document:,
+        ast_node:,
+        source_location:,
+        preserve_node_name: false
+      )
         @client = client
         @document = document
         @source_document = source_document
@@ -54,6 +61,10 @@ module GraphQL
 
         # Clear cache only needed during initialization
         @indexes = nil
+
+        if preserve_node_name && ast_node.name != "__anonymous__"
+          @definition_name = ast_node.name
+        end
       end
 
       # Internal: Get associated owner GraphQL::Client instance.

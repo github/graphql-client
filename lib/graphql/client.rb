@@ -101,7 +101,7 @@ module GraphQL
       @types = Schema.generate(@schema)
     end
 
-    def parse(str, filename = nil, lineno = nil)
+    def parse(str, filename = nil, lineno = nil, preserve_operation_names: false)
       if filename.nil? && lineno.nil?
         location = caller_locations(1, 1).first
         filename = location.path
@@ -200,7 +200,12 @@ module GraphQL
         raise error
       end
 
-      definitions = sliced_definitions(document_dependencies, doc, source_location: source_location)
+      definitions = sliced_definitions(
+        document_dependencies,
+        doc,
+        source_location: source_location,
+        preserve_operation_names: preserve_operation_names
+      )
 
       if @document.respond_to?(:merge) # GraphQL 1.9+
         visitor = RenameNodeVisitor.new(document_dependencies, definitions: definitions)
@@ -413,7 +418,7 @@ module GraphQL
 
     private
 
-    def sliced_definitions(document_dependencies, doc, source_location:)
+    def sliced_definitions(document_dependencies, doc, source_location:, preserve_operation_names: false)
       dependencies = document_dependencies.definitions.map do |node|
         [node.name, find_definition_dependencies(node)]
       end.to_h
@@ -436,7 +441,8 @@ module GraphQL
           ast_node: node,
           document: sliced_document,
           source_document: doc,
-          source_location: source_location
+          source_location: source_location,
+          preserve_node_name: preserve_operation_names,
         )
 
         [node.name, definition]

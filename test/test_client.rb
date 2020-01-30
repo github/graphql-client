@@ -165,6 +165,40 @@ class TestClient < MiniTest::Test
     assert_equal(query_string, Temp::UserQuery.document.to_query_string)
   end
 
+  def test_client_parse_anonymous_query_with_preserved_name
+    Temp.const_set :UserQuery, @client.parse(<<-'GRAPHQL', preserve_operation_names: true)
+      query {
+        viewer {
+          id
+          firstName
+          lastName
+        }
+      }
+    GRAPHQL
+
+    # Result should be the same as if the preserve_operation_names was not set
+    assert_kind_of GraphQL::Client::OperationDefinition, Temp::UserQuery
+    assert_equal "TestClient::Temp::UserQuery", Temp::UserQuery.name
+    assert_equal "TestClient__Temp__UserQuery", Temp::UserQuery.definition_name
+
+    assert_kind_of GraphQL::Language::Nodes::OperationDefinition, Temp::UserQuery.definition_node
+    assert_equal "TestClient__Temp__UserQuery", Temp::UserQuery.definition_node.name
+    assert_equal "query", Temp::UserQuery.definition_node.operation_type
+
+    query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
+      query TestClient__Temp__UserQuery {
+        viewer {
+          id
+          firstName
+          lastName
+        }
+      }
+    GRAPHQL
+
+    assert_equal(query_string, @client.document.to_query_string)
+    assert_equal(query_string, Temp::UserQuery.document.to_query_string)
+  end
+
   def test_client_parse_query_document
     Temp.const_set :UserDocument, @client.parse(<<-'GRAPHQL')
       query GetUser {
@@ -187,6 +221,40 @@ class TestClient < MiniTest::Test
 
     query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
       query TestClient__Temp__UserDocument__GetUser {
+        viewer {
+          id
+          firstName
+          lastName
+        }
+      }
+    GRAPHQL
+
+    assert_equal(query_string, @client.document.to_query_string)
+    assert_equal(query_string, Temp::UserDocument::GetUser.document.to_query_string)
+  end
+
+  def test_client_parse_query_document_with_preserved_name
+    Temp.const_set :UserDocument, @client.parse(<<-'GRAPHQL', preserve_operation_names: true)
+      query GetUser {
+        viewer {
+          id
+          firstName
+          lastName
+        }
+      }
+    GRAPHQL
+
+    assert_kind_of GraphQL::Client::OperationDefinition, Temp::UserDocument::GetUser
+    assert_equal "TestClient::Temp::UserDocument", Temp::UserDocument.name
+    assert_equal "TestClient::Temp::UserDocument::GetUser", Temp::UserDocument::GetUser.name
+    assert_equal "GetUser", Temp::UserDocument::GetUser.definition_name
+
+    assert_kind_of GraphQL::Language::Nodes::OperationDefinition, Temp::UserDocument::GetUser.definition_node
+    assert_equal "GetUser", Temp::UserDocument::GetUser.definition_node.name
+    assert_equal "query", Temp::UserDocument::GetUser.definition_node.operation_type
+
+    query_string = <<-'GRAPHQL'.gsub(/^      /, "").chomp
+      query GetUser {
         viewer {
           id
           firstName

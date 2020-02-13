@@ -64,11 +64,21 @@ module GraphQL
         request["Content-Type"] = "application/json"
         headers(context).each { |name, value| request[name] = value }
 
+        form_fields = form_data!(variables)
         body = {}
         body["query"] = document.to_query_string
         body["variables"] = variables if variables.any?
         body["operationName"] = operation_name if operation_name
-        request.body = JSON.generate(body)
+
+        if form_fields
+          # post as multipart/form-data to stream file contents
+          form_fields.update("operations" => JSON.generate(body))
+          request.set_form(form_fields, "multipart/form-data")
+        else
+          # post as application/json
+          request["Content-Type"] = "application/json"
+          request.body = JSON.generate(body)
+        end
 
         response = connection.request(request)
         case response
@@ -86,6 +96,44 @@ module GraphQL
         Net::HTTP.new(uri.host, uri.port).tap do |client|
           client.use_ssl = uri.scheme == "https"
         end
+      end
+
+    private
+
+      # generate the form data for a multipart request according to the GraphQL multipart request
+      # specification (https://github.com/jaydenseric/graphql-multipart-request-spec/)
+      #
+      # Example request form data:
+      #   operations: {"query": "…", "operationName": "addToGallery", "variables": {"galleryId": "…", images: [null, null, null]}}
+      #   map: {"1": ["variables.images.0"], "2": ["variables.images.1"], "3": ["variables.images.2"]}
+      #   1: File
+      #   2: File
+      #   3: File
+      #
+      # note: modifies `variables`, returns form data (except `operations`) or `nil`
+      def form_data!(variables)
+        form = {}
+        file_map = {}
+
+        # recursively walk `variables` looking for `File` values, add them to the form data,
+        # then replace with `nil`
+        stack = variables.map { |k, v|  [ variables, ['variables', k], v ] }
+        while (variable, path, val = stack.pop) do
+          if val.is_a?(Hash)
+            val.each { |k, v|  stack.push [ val, path.dup << k, v ] }
+
+          elsif val.is_a?(Array)
+            val.each.with_index { |v, i|  stack.push [ val, (path.dup << i), v ] }
+
+          elsif val.is_a?(IO)
+            idx = file_map.length + 1
+            file_map[idx.to_s] = [ path.map(&:to_s).join('.') ]
+            form[idx.to_s] = val
+            variable[path.last] = nil                  # replace `File` value with `nil` in `variables`
+          end
+        end
+
+        form.presence && form.update('map' => JSON.generate(file_map))
       end
     end
   end

@@ -75,7 +75,11 @@ module GraphQL
         when Net::HTTPOK, Net::HTTPBadRequest
           JSON.parse(response.body)
         else
-          { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }
+          if response.body.nil?
+            { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }
+          else
+            JSON.parse(response.body)
+          end
         end
       end
 

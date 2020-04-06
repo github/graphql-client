@@ -308,10 +308,12 @@ class TestSchemaType < MiniTest::Test
   def test_transform_lowercase_type_name
     person_type = GraphQL::ObjectType.define do
       name "person"
+      field :name, !types.String
     end
 
     photo_type = GraphQL::ObjectType.define do
       name "photo"
+      field :name, !types.String
     end
 
     search_result_union = GraphQL::UnionType.define do
@@ -339,10 +341,12 @@ class TestSchemaType < MiniTest::Test
   def test_reject_colliding_type_names
     underscored_type = GraphQL::ObjectType.define do
       name "search_result"
+      field :value, !types.String
     end
 
     camelcase_type = GraphQL::ObjectType.define do
       name "SearchResult"
+      field :value, !types.String
     end
 
     query_type = GraphQL::ObjectType.define do

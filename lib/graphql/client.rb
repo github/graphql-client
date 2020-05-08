@@ -74,12 +74,20 @@ module GraphQL
         raise TypeError, "expected schema to respond to #execute(), but was #{schema.class}"
       end
 
-      result = schema.execute(
+      payload = {
         document: IntrospectionDocument,
         operation_name: "IntrospectionQuery",
         variables: {},
         context: context
-      ).to_h
+      }
+
+      result = schema.execute(payload).to_h
+
+      _, errors, __ = eval_query_result(payload, result)
+      if errors.any?
+        errors_detail = errors.map { |e| e["message"] }.join("; ")
+        raise QueryError, "The query returned an error (#{errors_detail})"
+      end
 
       if io
         io = File.open(io, "w") if io.is_a?(String)
@@ -391,18 +399,7 @@ module GraphQL
         )
       end
 
-      deep_freeze_json_object(result)
-
-      data, errors, extensions = result.values_at("data", "errors", "extensions")
-
-      errors ||= []
-      errors = errors.map(&:dup)
-      GraphQL::Client::Errors.normalize_error_paths(data, errors)
-
-      errors.each do |error|
-        error_payload = payload.merge(message: error["message"], error: error)
-        ActiveSupport::Notifications.instrument("error.graphql", error_payload)
-      end
+      data, errors, extensions = self.class.eval_query_result(payload, result)
 
       Response.new(
         result,
@@ -424,7 +421,23 @@ module GraphQL
 
     private
 
-    def deep_freeze_json_object(obj)
+    def self.eval_query_result(payload, result)
+      deep_freeze_json_object(result)
+
+      data, errors, extensions = result.values_at("data", "errors", "extensions")
+
+      errors ||= []
+      errors = errors.map(&:dup)
+      GraphQL::Client::Errors.normalize_error_paths(data, errors)
+
+      errors.each do |error|
+        error_payload = payload.merge(message: error["message"], error: error)
+        ActiveSupport::Notifications.instrument("error.graphql", error_payload)
+      end
+      [data, errors, extensions]
+    end
+
+    def self.deep_freeze_json_object(obj)
       case obj
       when String
         obj.freeze

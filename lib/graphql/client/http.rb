@@ -31,6 +31,7 @@ module GraphQL
       def initialize(uri, &block)
         @uri = URI.parse(uri)
         singleton_class.class_eval(&block) if block_given?
+        @response_headers = {}
       end
 
       # Public: Parsed endpoint URI
@@ -43,6 +44,15 @@ module GraphQL
       # Returns Hash of String header names and values.
       def headers(_context)
         {}
+      end
+
+      # Public: The headers returned on the last successful request.
+      #
+      # Value is overwritten on each call to execute.
+      #
+      # Returns Hash of String header names and values
+      def response_headers
+        @response_headers
       end
 
       # Public: Make an HTTP request for GraphQL query.
@@ -70,9 +80,12 @@ module GraphQL
         body["operationName"] = operation_name if operation_name
         request.body = JSON.generate(body)
 
+        @response_headers = {}
         response = connection.request(request)
+
         case response
         when Net::HTTPOK, Net::HTTPBadRequest
+          @response_headers = response.to_h
           JSON.parse(response.body)
         else
           { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }

@@ -85,7 +85,7 @@ module GraphQL
 
         case response
         when Net::HTTPOK, Net::HTTPBadRequest
-          @response_headers = response.to_h
+          @response_headers = response.to_hash
           JSON.parse(response.body)
         else
           { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }

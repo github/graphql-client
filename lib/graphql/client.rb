@@ -67,6 +67,10 @@ module GraphQL
       end
     end
 
+    def self.load_schema_from_definition(schema)
+      GraphQL::Schema.from_definition(schema)
+    end
+
     IntrospectionDocument = GraphQL.parse(GraphQL::Introspection::INTROSPECTION_QUERY)
 
     def self.dump_schema(schema, io = nil, context: {})
@@ -84,6 +88,20 @@ module GraphQL
       if io
         io = File.open(io, "w") if io.is_a?(String)
         io.write(JSON.pretty_generate(result))
+        io.close_write
+      end
+
+      result
+    end
+
+    def self.dump_schema_definition(schema, io = nil, context: {})
+      introspection_results = dump_schema(schema, context: context)
+      introspected_schema = GraphQL::Schema.from_introspection(introspection_results)
+      result = introspected_schema.to_definition
+
+      if io
+        io = File.open(io, "w") if io.is_a?(String)
+        io.write(result)
         io.close_write
       end
 

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require "fileutils"
 require "graphql"
 require "graphql/client"
 require "json"
@@ -25,6 +26,11 @@ class TestClientSchema < MiniTest::Test
     query(AwesomeQueryType)
   end
 
+  def setup
+    super
+    FileUtils.makedirs("tmp")
+  end
+
   def test_load_schema_identity
     schema = GraphQL::Client.load_schema(Schema)
     assert_equal "AwesomeQuery", schema.query.graphql_name
@@ -42,8 +48,29 @@ class TestClientSchema < MiniTest::Test
     assert_equal "AwesomeQuery", schema.query.graphql_name
   end
 
+  def test_load_schema_from_json_file
+    result = Schema.execute(GraphQL::Introspection::INTROSPECTION_QUERY)
+    json_file = "tmp/schema.json"
+    IO.write(json_file, JSON.generate(result))
+    schema = GraphQL::Client.load_schema(json_file)
+    assert_equal "AwesomeQuery", schema.query.graphql_name
+  end
+
   def test_load_schema_ignores_missing_path
     refute GraphQL::Client.load_schema("#{__dir__}/missing-schema.json")
+  end
+
+  def test_load_schema_definition_from_string
+    sdl = Schema.to_definition
+    schema = GraphQL::Client.load_schema_from_definition(sdl)
+    assert_equal "AwesomeQuery", schema.query.graphql_name
+  end
+
+  def test_load_schema_definition_from_file
+    sdl_file = "tmp/schema.graphql"
+    IO.write(sdl_file, Schema.to_definition)
+    schema = GraphQL::Client.load_schema_from_definition(sdl_file)
+    assert_equal "AwesomeQuery", schema.query.graphql_name
   end
 
   def test_dump_schema
@@ -63,5 +90,34 @@ class TestClientSchema < MiniTest::Test
     conn = FakeConn.new
     GraphQL::Client.dump_schema(conn, StringIO.new, context: { user_id: 1})
     assert_equal({ user_id: 1 }, conn.context)
+  end
+
+  def test_dump_schema_definition
+    schema = GraphQL::Client.dump_schema_definition(Schema)
+    sdl = <<~'GRAPHQL'
+      schema {
+        query: AwesomeQuery
+      }
+
+      type AwesomeQuery {
+        version: Int!
+      }
+    GRAPHQL
+    assert_equal sdl.strip, schema
+  end
+
+  def test_dump_schema_io_definition
+    buffer = StringIO.new
+    GraphQL::Client.dump_schema_definition(Schema, buffer)
+    sdl = <<~'GRAPHQL'
+      schema {
+        query: AwesomeQuery
+      }
+
+      type AwesomeQuery {
+        version: Int!
+      }
+    GRAPHQL
+    assert_equal sdl.strip, buffer.string
   end
 end

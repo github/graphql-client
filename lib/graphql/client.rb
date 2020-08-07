@@ -81,6 +81,10 @@ module GraphQL
         context: context
       ).to_h
 
+      if result["errors"] && !result["errors"].empty?
+        raise "Introspection query failed: #{JSON.pretty_generate(result['errors'])}"
+      end
+
       if io
         io = File.open(io, "w") if io.is_a?(String)
         io.write(JSON.pretty_generate(result))

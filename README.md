@@ -132,6 +132,15 @@ result = SWAPI::Client.query(Hero::Query)
 result.data.luke.home_planet
 ```
 
+Client specific execution extras can be retrieved.
+
+```ruby
+result = SWAPI::Client.query(Hero::Query)
+
+result.client_extra.response
+result.client_extra.response.headers
+```
+
 `GraphQL::Client#query` also accepts variables and context parameters that can be leveraged by the underlying network executor.
 
 ```ruby

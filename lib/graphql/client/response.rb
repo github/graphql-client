@@ -30,12 +30,16 @@ module GraphQL
       # Public: Hash of server specific extension metadata.
       attr_reader :extensions
 
+      # Public: Hash of client extras.
+      attr_reader :client_extras
+
       # Internal: Initialize base class.
-      def initialize(hash, data: nil, errors: Errors.new, extensions: {})
+      def initialize(hash, data: nil, errors: Errors.new, extensions: {}, client_extras: {})
         @original_hash = hash
         @data = data
         @errors = errors
         @extensions = extensions
+        @client_extras = client_extras
       end
     end
   end

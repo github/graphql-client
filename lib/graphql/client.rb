@@ -332,7 +332,7 @@ module GraphQL
         context: context
       }
 
-      result = ActiveSupport::Notifications.instrument("query.graphql", payload) do
+      client_result = ActiveSupport::Notifications.instrument("query.graphql", payload) do
         execute.execute(
           document: document,
           operation_name: operation.name,
@@ -341,9 +341,9 @@ module GraphQL
         )
       end
 
-      deep_freeze_json_object(result)
+      deep_freeze_json_object(client_result.body)
 
-      data, errors, extensions = result.values_at("data", "errors", "extensions")
+      data, errors, extensions = client_result.body.values_at("data", "errors", "extensions")
 
       errors ||= []
       errors = errors.map(&:dup)
@@ -355,10 +355,11 @@ module GraphQL
       end
 
       Response.new(
-        result,
+        client_result.body,
         data: definition.new(data, Errors.new(errors, ["data"])),
         errors: Errors.new(errors),
-        extensions: extensions
+        extensions: extensions,
+        client_extras: client_result.extras
       )
     end
 

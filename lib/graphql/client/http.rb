@@ -5,6 +5,15 @@ require "uri"
 
 module GraphQL
   class Client
+    class ImplementationResponse
+      attr_reader :body, :extras
+
+      def initialize(body:, extras:)
+        @body = body
+        @extras = extras
+      end
+    end
+
     # Public: Basic HTTP network adapter.
     #
     #   GraphQL::Client.new(
@@ -71,12 +80,13 @@ module GraphQL
         request.body = JSON.generate(body)
 
         response = connection.request(request)
-        case response
-        when Net::HTTPOK, Net::HTTPBadRequest
-          JSON.parse(response.body)
-        else
-          { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }
-        end
+
+        ImplementationResponse.new(
+          body: response_body(response),
+          extras: {
+            http_response: response,
+          }
+        )
       end
 
       # Public: Extension point for subclasses to customize the Net:HTTP client
@@ -85,6 +95,17 @@ module GraphQL
       def connection
         Net::HTTP.new(uri.host, uri.port).tap do |client|
           client.use_ssl = uri.scheme == "https"
+        end
+      end
+
+      private
+
+      def response_body(response)
+        case response
+        when Net::HTTPOK, Net::HTTPBadRequest
+          JSON.parse(response.body)
+        else
+          { "errors" => [{ "message" => "#{response.code} #{response.message}" }] }
         end
       end
     end

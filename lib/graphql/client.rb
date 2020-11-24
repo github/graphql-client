@@ -27,6 +27,15 @@ module GraphQL
     class NotImplementedError < Error; end
     class ValidationError < Error; end
 
+    class ImplementationResponse
+      attr_reader :body, :extras
+
+      def initialize(body:, extras:)
+        @body = body
+        @extras = extras
+      end
+    end
+
     extend CollocatedEnforcement
 
     attr_reader :schema, :execute
@@ -338,6 +347,19 @@ module GraphQL
           operation_name: operation.name,
           variables: variables,
           context: context
+        )
+      end
+
+      # Fallback, not sure what to do with this.
+      # A) Backward compatibility with client implementation out there.
+      #    This could be a breaking change we plan or do here.
+      # B) Tests rely on passing in a Schema as the execute param of the initializer.
+      #      GraphQL::Client.new(schema: Schema, execute: Schema)
+      #    Does this make sense or is it just for tests, I'm not certain.
+      unless client_result.is_a?(ImplementationResponse)
+        client_result = ImplementationResponse.new(
+          body: client_result,
+          extras: {}
         )
       end
 

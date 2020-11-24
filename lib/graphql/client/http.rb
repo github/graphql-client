@@ -5,15 +5,6 @@ require "uri"
 
 module GraphQL
   class Client
-    class ImplementationResponse
-      attr_reader :body, :extras
-
-      def initialize(body:, extras:)
-        @body = body
-        @extras = extras
-      end
-    end
-
     # Public: Basic HTTP network adapter.
     #
     #   GraphQL::Client.new(

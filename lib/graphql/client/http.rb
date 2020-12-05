@@ -117,27 +117,27 @@ module GraphQL
 
         # recursively walk `variables` looking for `File` values, add them to the form data,
         # then replace with `nil`
-        stack = variables.map { |k, v|  [ variables, ['variables', k], v ] }
+        stack = variables.map { |k, v|  [variables, ["variables", k], v] }
         while (variable, path, val = stack.pop) do
           if val.is_a?(Hash)
-            val.each { |k, v|  stack.push [ val, path.dup << k, v ] }
+            val.each { |k, v|  stack.push [val, path.dup << k, v] }
 
           elsif val.is_a?(Array)
-            val.each.with_index { |v, i|  stack.push [ val, (path.dup << i), v ] }
+            val.each.with_index { |v, i|  stack.push [val, (path.dup << i), v] }
 
           elsif val.respond_to?(:to_path)
             metadata = { filename: File.basename(val.to_path) }
             metadata[:content_type] = val.content_type  if val.respond_to?(:content_type)
 
             idx = file_map.length + 1
-            file_map[idx.to_s] = [ path.map(&:to_s).join('.') ]
+            file_map[idx.to_s] = [path.map(&:to_s).join(".")]
             form_data.append [idx.to_s, val, metadata]
 
-            variable[path.last] = nil                  # replace `File` value with `nil` in `variables`
+            variable[path.last] = nil  # replace `IO` value with `nil` in `variables`
           end
         end
 
-        form_data.presence && form_data.append(['map', JSON.generate(file_map)])
+        form_data.presence && form_data.append(["map", JSON.generate(file_map)])
       end
     end
   end

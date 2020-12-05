@@ -72,7 +72,7 @@ module GraphQL
 
         if form_fields
           # post as multipart/form-data to stream file contents
-          form_fields.update("operations" => JSON.generate(body))
+          form_fields.append(["operations", JSON.generate(body)])
           request.set_form(form_fields, "multipart/form-data")
         else
           # post as application/json
@@ -112,7 +112,7 @@ module GraphQL
       #
       # note: modifies `variables`, returns form data (except `operations`) or `nil`
       def form_data!(variables)
-        form = {}
+        form_data = []
         file_map = {}
 
         # recursively walk `variables` looking for `File` values, add them to the form data,
@@ -125,15 +125,19 @@ module GraphQL
           elsif val.is_a?(Array)
             val.each.with_index { |v, i|  stack.push [ val, (path.dup << i), v ] }
 
-          elsif val.is_a?(IO)
+          elsif val.respond_to?(:to_path)
+            metadata = { filename: File.basename(val.to_path) }
+            metadata[:content_type] = val.content_type  if val.respond_to?(:content_type)
+
             idx = file_map.length + 1
             file_map[idx.to_s] = [ path.map(&:to_s).join('.') ]
-            form[idx.to_s] = val
+            form_data.append [idx.to_s, val, metadata]
+
             variable[path.last] = nil                  # replace `File` value with `nil` in `variables`
           end
         end
 
-        form.presence && form.update('map' => JSON.generate(file_map))
+        form_data.presence && form_data.append(['map', JSON.generate(file_map)])
       end
     end
   end

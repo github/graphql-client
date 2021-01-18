@@ -46,6 +46,29 @@ class TestClientSchema < MiniTest::Test
     refute GraphQL::Client.load_schema("#{__dir__}/missing-schema.json")
   end
 
+  def test_dump_schema_when_execute_has_not_found_error
+    executor = Class.new do
+      def execute(_)
+        {"errors"=>[{"message"=>"404 Not Found"}]}
+      end
+    end.new
+    error = assert_raises(GraphQL::Client::QueryError) {GraphQL::Client.dump_schema(executor)}
+    assert_equal "The query returned an error (404 Not Found)", error.message
+  end
+
+  def test_dump_schema_when_execute_has_several_errors
+    executor = Class.new do
+      def execute(_)
+        {"errors"=>[
+          {"message" => "error 1"},
+          {"message" => "error 2"}]
+        }
+      end
+    end.new
+    error = assert_raises(GraphQL::Client::QueryError) {GraphQL::Client.dump_schema(executor)}
+    assert_equal "The query returned an error (error 1; error 2)", error.message
+  end
+
   def test_dump_schema
     schema = GraphQL::Client.dump_schema(Schema)
     assert_kind_of Hash, schema

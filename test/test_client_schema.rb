@@ -52,7 +52,7 @@ class TestClientSchema < MiniTest::Test
         {"errors"=>[{"message"=>"404 Not Found"}]}
       end
     end.new
-    error = assert_raises(GraphQL::Client::QueryError) {GraphQL::Client.dump_schema(executor)}
+    error = assert_raises(GraphQL::Client::QueryError) { GraphQL::Client.dump_schema(executor) }
     assert_equal "The query returned an error (404 Not Found)", error.message
   end
 
@@ -65,7 +65,7 @@ class TestClientSchema < MiniTest::Test
         }
       end
     end.new
-    error = assert_raises(GraphQL::Client::QueryError) {GraphQL::Client.dump_schema(executor)}
+    error = assert_raises(GraphQL::Client::QueryError) { GraphQL::Client.dump_schema(executor) }
     assert_equal "The query returned an error (error 1; error 2)", error.message
   end
 

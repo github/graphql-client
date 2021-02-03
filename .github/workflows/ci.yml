@@ -12,12 +12,16 @@ jobs:
         ruby_version:
           - 2.5.x
           - 2.6.x
+          - 2.7.x
+          - 3.0.x
         graphql_version:
           - 1.10.14
-          - 1.11.1
+          - 1.11.7
+          - 1.12.3
         rails_version:
           - "~> 5.2.0"
           - "~> 6.0.0"
+          - "~> 6.1.0"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Ruby ${{ matrix.ruby_version }}
@@ -41,7 +45,7 @@ jobs:
     - name: Set up Ruby
       uses: actions/setup-ruby@v1
       with:
-        ruby-version: 2.6.x
+        ruby-version: 2.7.x
     - name: Build and test
       run: |
         gem install bundler

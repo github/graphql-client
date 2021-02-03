@@ -15,12 +15,12 @@ Gem::Specification.new do |s|
   s.add_development_dependency "actionpack", ">= 3.2.22"
   s.add_development_dependency "erubi", "~> 1.6"
   s.add_development_dependency "erubis", "~> 2.7"
-  s.add_development_dependency "minitest", "~> 5.9"
-  s.add_development_dependency "rake", "~> 11.2"
-  s.add_development_dependency "rubocop-github", "~> 0.10"
-  s.add_development_dependency "rubocop", "~> 0.55"
+  s.add_development_dependency "minitest", "~> 5.14"
+  s.add_development_dependency "rake", "~> 12.0"
+  s.add_development_dependency "rubocop-github", "~> 0.16"
+  s.add_development_dependency "rubocop", "~> 0.82"
 
-  s.required_ruby_version = ">= 2.1.0"
+  s.required_ruby_version = ">= 2.5.0"
 
   s.email = "engineering@github.com"
   s.authors = "GitHub"

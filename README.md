@@ -45,6 +45,8 @@ module SWAPI
 end
 ```
 
+Read [Rails configuration](guides/rails-configuration.md) if you want to use GraphQL Client in Ruby On Rails. 
+
 ### Defining Queries
 
 If you haven't already, [familiarize yourself with the GraphQL query syntax](http://graphql.org/docs/queries/). Queries are declared with the same syntax inside of a `<<-'GRAPHQL'` heredoc. There isn't any special query builder Ruby DSL.

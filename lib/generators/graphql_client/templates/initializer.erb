@@ -1,0 +1,13 @@
+# frozen_string_literal: true
+
+client = GraphQL::Client.new(
+  schema: Rails.root.join('db/schema.json'),
+  execute: GraphQL::Client::HTTP.new('https://foo.com/')
+)
+Rails.application.config.graphql.client = client
+
+# optional change the location of the views. Defaults to: `app/views`
+# Rails.application.config.graphql.client_views_path = Rails.root.join('path/to/views').to_path
+
+
+

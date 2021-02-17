@@ -17,6 +17,12 @@ class TestClientSchema < MiniTest::Test
     end
   end
 
+  ErrorConn = Class.new do
+    def execute(document:, operation_name: nil, variables: {}, context: {})
+      { "errors" => [{ "message" => "something bad happened" }] }
+    end
+  end
+
   class AwesomeQueryType < GraphQL::Schema::Object
     field :version, Integer, null: false
   end
@@ -63,5 +69,12 @@ class TestClientSchema < MiniTest::Test
     conn = FakeConn.new
     GraphQL::Client.dump_schema(conn, StringIO.new, context: { user_id: 1})
     assert_equal({ user_id: 1 }, conn.context)
+  end
+
+  def test_dump_schema_errors
+    conn = ErrorConn.new
+    assert_raises StandardError do
+      GraphQL::Client.dump_schema(conn)
+    end
   end
 end

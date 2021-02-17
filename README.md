@@ -27,7 +27,7 @@ module SWAPI
   HTTP = GraphQL::Client::HTTP.new("https://example.com/graphql") do
     def headers(context)
       # Optionally set any HTTP headers
-      { "User-Agent": "My Client" }
+      { "User-Agent" => "My Client" }
     end
   end  
 

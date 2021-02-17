@@ -8,6 +8,10 @@ module GraphQL
     class InvariantError < Error
     end
 
+    # The Server has returned an error while executing a query
+    class QueryError < Error
+    end
+
     class ImplicitlyFetchedFieldError < NoMethodError
     end
 

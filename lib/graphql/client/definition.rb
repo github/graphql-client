@@ -89,7 +89,7 @@ module GraphQL
         if name
           @definition_name = name.gsub("::", "__").freeze
         else
-          "#{self.class.name}_#{object_id}".gsub("::", "__").freeze
+          "#{self.class.name}_#{object_id.abs}".gsub("::", "__").freeze
         end
       end
 

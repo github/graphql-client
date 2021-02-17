@@ -23,7 +23,7 @@ hero_query = SWAPI::Client.parse <<-'GRAPHQL'
     }
   }
 GRAPHQL
-result = SWAPI::Client.query(HeroNameQuery, variables: { id: params[:id] })
+result = SWAPI::Client.query(hero_query, variables: { id: params[:id] })
 ```
 
 Parsing a query and validating a query on every request adds performance overhead. It also prevents validation errors from being discovered until request time, rather than when the query is parsed at startup.

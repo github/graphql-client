@@ -724,11 +724,12 @@ class TestClient < MiniTest::Test
     GRAPHQL
 
     assert_nil user_query.name
-    assert_equal "GraphQL__Client__OperationDefinition_#{user_query.object_id}", user_query.definition_name
+    hexdigest = Digest::MD5.hexdigest("viewer {\n  id\n}")
+    assert_equal "GraphQL__Client__OperationDefinition_#{hexdigest}", user_query.definition_name
 
     # rubocop:disable GraphQL/Heredoc
     query_string = <<-GRAPHQL.gsub(/^      /, "").chomp
-      query GraphQL__Client__OperationDefinition_#{user_query.object_id} {
+      query GraphQL__Client__OperationDefinition_#{hexdigest} {
         viewer {
           id
         }

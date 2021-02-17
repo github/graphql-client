@@ -5,6 +5,7 @@ require "graphql"
 require "graphql/client/collocated_enforcement"
 require "graphql/client/definition_variables"
 require "graphql/client/definition"
+require "graphql/client/deprecation_visitor"
 require "graphql/client/error"
 require "graphql/client/errors"
 require "graphql/client/fragment_definition"
@@ -213,6 +214,8 @@ module GraphQL
         raise error
       end
 
+      report_deprecations(doc, filename, lineno)
+
       definitions = sliced_definitions(document_dependencies, doc, source_location: source_location)
 
       visitor = RenameNodeVisitor.new(document_dependencies, definitions: definitions)
@@ -394,6 +397,16 @@ module GraphQL
     end
 
     private
+
+    def report_deprecations(document, source_file, line_number)
+      deprecation_visitor = DeprecationVisitor.new(
+        document: document,
+        schema: schema,
+        source_file: source_file,
+        line_number: line_number
+      )
+      deprecation_visitor.visit
+    end
 
     def sliced_definitions(document_dependencies, doc, source_location:)
       dependencies = document_dependencies.definitions.map do |node|

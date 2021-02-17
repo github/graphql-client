@@ -27,6 +27,15 @@ module GraphQL
     class NotImplementedError < Error; end
     class ValidationError < Error; end
 
+    class ImplementationResponse
+      attr_reader :body, :extras
+
+      def initialize(body:, extras:)
+        @body = body
+        @extras = extras
+      end
+    end
+
     extend CollocatedEnforcement
 
     attr_reader :schema, :execute
@@ -353,7 +362,7 @@ module GraphQL
         context: context
       }
 
-      result = ActiveSupport::Notifications.instrument("query.graphql", payload) do
+      client_result = ActiveSupport::Notifications.instrument("query.graphql", payload) do
         execute.execute(
           document: document,
           operation_name: operation.name,
@@ -362,9 +371,22 @@ module GraphQL
         )
       end
 
-      deep_freeze_json_object(result)
+      # Fallback, not sure what to do with this.
+      # A) Backward compatibility with client implementation out there.
+      #    This could be a breaking change we plan or do here.
+      # B) Tests rely on passing in a Schema as the execute param of the initializer.
+      #      GraphQL::Client.new(schema: Schema, execute: Schema)
+      #    Does this make sense or is it just for tests, I'm not certain.
+      unless client_result.is_a?(ImplementationResponse)
+        client_result = ImplementationResponse.new(
+          body: client_result,
+          extras: {}
+        )
+      end
 
-      data, errors, extensions = result.values_at("data", "errors", "extensions")
+      deep_freeze_json_object(client_result.body)
+
+      data, errors, extensions = client_result.body.values_at("data", "errors", "extensions")
 
       errors ||= []
       errors = errors.map(&:dup)
@@ -376,10 +398,11 @@ module GraphQL
       end
 
       Response.new(
-        result,
+        client_result.body,
         data: definition.new(data, Errors.new(errors, ["data"])),
         errors: Errors.new(errors),
-        extensions: extensions
+        extensions: extensions,
+        client_extras: client_result.extras
       )
     end
 

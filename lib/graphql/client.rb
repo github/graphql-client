@@ -333,7 +333,7 @@ module GraphQL
       raise NotImplementedError, "client network execution not configured" unless execute
 
       unless definition.is_a?(OperationDefinition)
-        raise TypeError, "expected definition to be a #{OperationDefinition.name} but was #{document.class.name}"
+        raise TypeError, "expected definition to be a #{OperationDefinition.name} but was #{definition.class.name}"
       end
 
       if allow_dynamic_queries == false && definition.name.nil?

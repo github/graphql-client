@@ -54,7 +54,7 @@ module GraphQL
         if schema.end_with?(".json") && File.exist?(schema)
           load_schema(File.read(schema))
         elsif schema =~ /\A\s*{/
-          load_schema(JSON.parse(schema))
+          load_schema(JSON.parse(schema, freeze: true))
         end
       else
         if schema.respond_to?(:execute)

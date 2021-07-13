@@ -42,6 +42,13 @@ class TestClientSchema < MiniTest::Test
     assert_equal "AwesomeQuery", schema.query.graphql_name
   end
 
+  def test_load_schema_from_io
+    json = JSON.generate(Schema.execute(GraphQL::Introspection::INTROSPECTION_QUERY))
+    io = StringIO.new(json)
+    schema = GraphQL::Client.load_schema(io)
+    assert_equal "AwesomeQuery", schema.query.graphql_name
+  end
+
   def test_load_schema_ignores_missing_path
     refute GraphQL::Client.load_schema("#{__dir__}/missing-schema.json")
   end

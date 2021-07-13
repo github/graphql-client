@@ -59,6 +59,8 @@ module GraphQL
       else
         if schema.respond_to?(:execute)
           load_schema(dump_schema(schema))
+        elsif schema.respond_to?(:read)
+          load_schema(schema.read)
         elsif schema.respond_to?(:to_h)
           load_schema(schema.to_h)
         else
